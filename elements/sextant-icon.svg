@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+
+  <g transform="rotate(-25, 32, 32)">
+
+    <!-- Left strut: apex down to bottom-left -->
+    <line x1="32" y1="8" x2="8"  y2="54" stroke-width="2.5"/>
+
+    <!-- Right strut: apex down to bottom-right -->
+    <line x1="32" y1="8" x2="56" y2="54" stroke-width="2.5"/>
+
+    <!-- Vertical index arm from apex straight down -->
+    <line x1="32" y1="8" x2="32" y2="54" stroke-width="2"/>
+
+    <!-- The limb: arc closing the base -->
+    <path d="M 8 54 A 34 34 0 0 1 56 54" stroke-width="3"/>
+
+    <!-- Pivot at apex -->
+    <circle cx="32" cy="8" r="2.5" fill="currentColor" stroke-width="1.5"/>
+
+    <!-- Micrometer drum where index arm meets limb -->
+    <circle cx="32" cy="54" r="3.5" stroke-width="1.5"/>
+
+  </g>
+
+</svg>

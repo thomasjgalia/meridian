@@ -1,0 +1,13 @@
+{
+  "name": "meridian-api",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "scripts": {
+    "start": "func start",
+    "build": "echo 'No build step for Node.js functions'"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.7.0",
+    "mssql": "^11.0.1"
+  }
+}

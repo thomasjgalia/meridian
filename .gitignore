@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+api/node_modules/
+
+# Build output
+dist/
+.output/
+
+# Environment — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Azure Functions local settings — contains connection strings
+api/local.settings.json
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Azure
+.azure/

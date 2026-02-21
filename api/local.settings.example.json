@@ -1,0 +1,23 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+
+    "SQL_SERVER":   "your-server.database.windows.net",
+    "SQL_DATABASE": "meridian",
+    "SQL_USER":     "meridian-app",
+    "SQL_PASSWORD": "your-password-here",
+
+    "ENTRA_TENANT_ID":  "00000000-0000-0000-0000-000000000000",
+    "ENTRA_CLIENT_ID":  "00000000-0000-0000-0000-000000000000",
+    "ENTRA_AUDIENCE":   "api://00000000-0000-0000-0000-000000000000",
+
+    "DEV_AUTH_BYPASS": "false"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "http://localhost:5173",
+    "CORSCredentials": false
+  }
+}
