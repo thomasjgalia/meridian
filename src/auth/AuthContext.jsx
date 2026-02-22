@@ -1,7 +1,4 @@
-import { createContext, useContext, useState } from 'react'
-import { useIsAuthenticated, useMsal } from '@azure/msal-react'
-import { InteractionStatus } from '@azure/msal-browser'
-import { loginRequest, apiRequest } from './msalConfig'
+import { createContext, useContext, useState, useEffect } from 'react'
 
 /**
  * AuthContext — single interface for auth state throughout the app.
@@ -9,10 +6,10 @@ import { loginRequest, apiRequest } from './msalConfig'
  * In dev mode (VITE_DEV_AUTH=true) a hardcoded mock user is returned
  * immediately — no Entra registration required.
  *
- * In production the context delegates to MSAL.
- *
- * Consumers always use:
- *   const { user, isAuthenticated, isLoading, login, logout, getToken } = useAuth()
+ * In production, SWA built-in auth handles the Entra login flow.
+ * The frontend reads the current user from /.auth/me and redirects
+ * to /.auth/login/aad for login. SWA injects x-ms-client-principal
+ * on all API requests automatically — no bearer token management needed.
  */
 
 const AuthContext = createContext(null)
@@ -20,7 +17,7 @@ const AuthContext = createContext(null)
 // ─── Dev mock ────────────────────────────────────────────────────────────────
 
 const DEV_USER = {
-  id:          0,                          // local DB id (seeded on first real login)
+  id:          0,
   azureOid:    'dev-oid-00000000',
   tenantId:    'dev-tenant-00000000',
   email:       'dev@meridian.local',
@@ -37,50 +34,42 @@ function DevAuthProvider({ children }) {
     isLoading:       false,
     login:           () => setIsAuthenticated(true),
     logout:          () => setIsAuthenticated(false),
-    getToken:        async () => 'dev-token',   // API functions check DEV_AUTH on their side too
+    getToken:        async () => 'dev-token',
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// ─── Production MSAL provider ─────────────────────────────────────────────────
+// ─── SWA built-in auth provider ──────────────────────────────────────────────
 
-function MsalAuthProvider({ children }) {
-  const { instance, accounts, inProgress } = useMsal()
-  const isAuthenticated = useIsAuthenticated()
+function SwaAuthProvider({ children }) {
+  const [user, setUser] = useState(undefined) // undefined = still loading
 
-  async function getToken() {
-    const account = accounts[0]
-    if (!account) throw new Error('No active account')
-    try {
-      const result = await instance.acquireTokenSilent({ ...apiRequest, account })
-      return result.accessToken
-    } catch {
-      await instance.acquireTokenRedirect({ ...apiRequest, account })
-    }
-  }
-
-  // Map the active MSAL account to our user shape.
-  // The full user record (with DB id) is fetched from /api/me after login.
-  const account = accounts[0]
-  const user = isAuthenticated && account
-    ? {
-        id:          null,
-        azureOid:    account.idTokenClaims?.oid,
-        tenantId:    account.tenantId,
-        email:       account.username,
-        displayName: account.name ?? account.username,
-        avatarUrl:   null,
-      }
-    : null
+  useEffect(() => {
+    fetch('/.auth/me')
+      .then((r) => r.json())
+      .then((data) => {
+        const p = data.clientPrincipal
+        if (!p) { setUser(null); return }
+        setUser({
+          id:          null,
+          azureOid:    p.userId,
+          tenantId:    null,
+          email:       p.userDetails,
+          displayName: p.userDetails,
+          avatarUrl:   null,
+        })
+      })
+      .catch(() => setUser(null))
+  }, [])
 
   const value = {
     user,
-    isAuthenticated,
-    isLoading: inProgress !== InteractionStatus.None,
-    login:     () => instance.loginRedirect(loginRequest),
-    logout:    () => instance.logoutRedirect({ postLogoutRedirectUri: window.location.origin }),
-    getToken,
+    isAuthenticated: !!user,
+    isLoading:       user === undefined,
+    login:           () => { window.location.href = '/.auth/login/aad' },
+    logout:          () => { window.location.href = '/.auth/logout' },
+    getToken:        async () => null, // SWA injects auth headers for API calls automatically
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
@@ -91,10 +80,8 @@ function MsalAuthProvider({ children }) {
 export const DEV_AUTH = import.meta.env.VITE_DEV_AUTH === 'true'
 
 export function AuthProvider({ children }) {
-  if (DEV_AUTH) {
-    return <DevAuthProvider>{children}</DevAuthProvider>
-  }
-  return <MsalAuthProvider>{children}</MsalAuthProvider>
+  if (DEV_AUTH) return <DevAuthProvider>{children}</DevAuthProvider>
+  return <SwaAuthProvider>{children}</SwaAuthProvider>
 }
 
 export function useAuth() {
