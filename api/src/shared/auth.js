@@ -35,10 +35,10 @@ function getCaller(request) {
     const claim     = (typ) => principal.claims?.find((c) => c.typ === typ)?.val
 
     return {
-      oid:      claim('http://schemas.microsoft.com/identity/claims/objectidentifier') ?? claim('oid'),
+      oid:      claim('http://schemas.microsoft.com/identity/claims/objectidentifier') ?? claim('oid') ?? principal.userId,
       tenantId: claim('http://schemas.microsoft.com/identity/claims/tenantid') ?? claim('tid'),
-      email:    claim('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress') ?? claim('preferred_username'),
-      name:     claim('name'),
+      email:    claim('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress') ?? claim('preferred_username') ?? principal.userDetails,
+      name:     claim('name') ?? principal.userDetails,
     }
   } catch {
     return null
