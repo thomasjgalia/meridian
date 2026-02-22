@@ -25,7 +25,7 @@ async function resolveUser(caller) {
      OUTPUT INSERTED.id;`,
     [
       { name: 'oid',      type: sql.NVarChar, value: caller.oid      },
-      { name: 'tenantId', type: sql.NVarChar, value: caller.tenantId },
+      { name: 'tenantId', type: sql.NVarChar, value: caller.tenantId ?? null },
       { name: 'email',    type: sql.NVarChar, value: caller.email     },
       { name: 'name',     type: sql.NVarChar, value: caller.name      },
     ]
