@@ -2,6 +2,7 @@
   "name": "meridian-api",
   "version": "0.1.0",
   "type": "commonjs",
+  "main": "src/functions/*.js",
   "scripts": {
     "start": "func start",
     "build": "echo 'No build step for Node.js functions'"
