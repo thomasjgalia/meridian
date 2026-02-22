@@ -70,9 +70,6 @@ export default function NewWorkModal({ items, statuses, onAdd, onClose }) {
     setArcId(id)
     setEpisodeId(null)
     setSignalId(null)
-    // infer meridianId from the chosen arc
-    const arc = items.find((i) => i.id === id)
-    if (arc) setMeridianId(arc.meridianId)
   }
 
   function selectEpisode(id) {
@@ -93,7 +90,7 @@ export default function NewWorkModal({ items, statuses, onAdd, onClose }) {
     // relay
     const sig = items.find((i) => i.id === signalId)
     return { parentId: signalId, resolvedMeridianId: sig?.meridianId ?? null }
-  }, [type, meridianId, arcId, episodeId, signalId, items])
+  }, [type, arcId, episodeId, signalId, items])
 
   // ── Validation ─────────────────────────────────────────────────────────────
   const isValid = useMemo(() => {
@@ -125,11 +122,9 @@ export default function NewWorkModal({ items, statuses, onAdd, onClose }) {
   function handleSubmit(e) {
     e.preventDefault()
     if (!isValid) return
-    const defaultStatus = statuses.find((s) => s.isDefault) ?? statuses[0]
-    const maxId = items.reduce((m, i) => Math.max(m, i.id), 0)
+    const defaultStatus = statuses.find((s) => s.meridianId === resolvedMeridianId && s.isDefault) ?? statuses.find((s) => s.isDefault) ?? statuses[0]
     const siblings = items.filter((i) => i.parentId === parentId && i.type === type)
     onAdd({
-      id:          maxId + 1,
       meridianId:  resolvedMeridianId,
       parentId,
       type,
