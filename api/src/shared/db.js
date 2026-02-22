@@ -7,10 +7,10 @@ const sql = require('mssql')
  */
 
 const config = {
-  server:   process.env.SQL_SERVER,
-  database: process.env.SQL_DATABASE,
-  user:     process.env.SQL_USER,
-  password: process.env.SQL_PASSWORD,
+  server:   process.env.AZURE_SQL_SERVER,
+  database: process.env.AZURE_SQL_DATABASE,
+  user:     process.env.AZURE_SQL_USER,
+  password: process.env.AZURE_SQL_PASSWORD,
   options: {
     encrypt: true,          // Required for Azure SQL
     trustServerCertificate: false,
