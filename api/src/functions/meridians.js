@@ -55,10 +55,10 @@ app.http('meridiansCreate', {
       await query(
         `INSERT INTO statuses (meridian_id, name, color, position, is_default, is_complete, is_blocked)
          VALUES
-           (@mid, 'Adrift',      '#94A3B8', 0, 1, 0, 0),
-           (@mid, 'In Progress', '#3B82F6', 1, 0, 0, 0),
-           (@mid, 'In Irons',    '#F59E0B', 2, 0, 0, 1),
-           (@mid, 'Complete',    '#10B981', 3, 0, 1, 0)`,
+           (@mid, 'Standby', '#94A3B8', 0, 1, 0, 0),
+           (@mid, 'Live',    '#3B82F6', 1, 0, 0, 0),
+           (@mid, 'Static',  '#F59E0B', 2, 0, 0, 1),
+           (@mid, 'Over',    '#10B981', 3, 0, 1, 0)`,
         [{ name: 'mid', type: sql.Int, value: meridian.id }]
       )
 

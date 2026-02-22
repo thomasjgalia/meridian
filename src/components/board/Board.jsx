@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Plus, ChevronRight } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
+import { api } from '../../api/client'
 import { IconSextant, IconArc, IconEpisode, IconSignal, IconRelay } from '../icons'
 import Avatar from '../ui/Avatar'
 import FilterBar from './FilterBar'
@@ -10,28 +11,12 @@ import SlidePanel from './SlidePanel'
 import NewWorkModal from './NewWorkModal'
 import NewMeridianModal from './NewMeridianModal'
 import NewArcModal from './NewArcModal'
-import {
-  MOCK_WORK_ITEMS,
-  MOCK_STATUSES,
-  MOCK_MERIDIANS,
-  MOCK_USERS,
-  MOCK_SPRINTS,
-} from '../../mock/data'
 
 // ── Lookup maps ───────────────────────────────────────────────────────────────
 
 function toMap(arr, key = 'id') {
   return Object.fromEntries(arr.map((x) => [x[key], x]))
 }
-
-const STATUS_MAP = toMap(MOCK_STATUSES)
-const USER_MAP   = toMap(MOCK_USERS)
-
-// Sprints ordered: active → planning → complete
-const SORTED_SPRINTS = [...MOCK_SPRINTS].sort((a, b) => {
-  const order = { active: 0, planning: 1, complete: 2 }
-  return order[a.state] - order[b.state]
-})
 
 // ── Header hierarchy legend ───────────────────────────────────────────────────
 
@@ -42,10 +27,8 @@ const HIERARCHY = [
   { Icon: IconRelay,   label: 'Relay',   color: 'text-orange-500' },
 ]
 
-
 // ── Backlog tree utilities ────────────────────────────────────────────────────
 
-/** Walk up the item's parent chain to find the nearest ancestor (or self) of a given type. */
 function findAncestorId(item, type, itemMap) {
   if (item.type === type) return item.id
   let cur = item.parentId ? itemMap[item.parentId] : null
@@ -65,10 +48,6 @@ function matchesFilters(item, filters, itemMap) {
   return true
 }
 
-/**
- * Build flat ordered rows from a subset of items, respecting expand state.
- * Used for the backlog section only.
- */
 function buildBacklogRows(items, itemMap, expandedIds, filters) {
   const hasFilters =
     filters.meridianIds.length > 0 ||
@@ -125,27 +104,50 @@ function buildBacklogRows(items, itemMap, expandedIds, filters) {
 
 // ── Board ─────────────────────────────────────────────────────────────────────
 
-// Backlog tree starts with all Episodes expanded (Arcs are excluded from the backlog)
-const INITIAL_EXPANDED = new Set(
-  MOCK_WORK_ITEMS.filter((i) => i.type === 'episode').map((i) => i.id)
-)
 const INITIAL_FILTERS = { meridianIds: [], arcIds: [], episodeIds: [], assigneeIds: [], statusIds: [], sprintId: null }
 
 export default function Board() {
   const { user, logout } = useAuth()
 
-  const [expanded,          setExpanded]          = useState(INITIAL_EXPANDED)
+  // ── Server state ──────────────────────────────────────────────────────────
+  const [items,     setItems]     = useState([])
+  const [meridians, setMeridians] = useState([])
+  const [statuses,  setStatuses]  = useState([])
+  const [users,     setUsers]     = useState([])
+  const [sprints,   setSprints]   = useState([])
+  const [loading,   setLoading]   = useState(true)
+  const [error,     setError]     = useState(null)
+
+  // ── UI state ──────────────────────────────────────────────────────────────
+  const [expanded,          setExpanded]          = useState(new Set())
   const [backlogCollapsed,  setBacklogCollapsed]  = useState(false)
   const [selectedId,        setSelectedId]        = useState(null)
   const [filters,           setFilters]           = useState(INITIAL_FILTERS)
-  const [items,             setItems]             = useState(MOCK_WORK_ITEMS)
-  const [meridians,         setMeridians]         = useState(MOCK_MERIDIANS)
   const [newWorkOpen,       setNewWorkOpen]       = useState(false)
   const [newMeridianOpen,   setNewMeridianOpen]   = useState(false)
   const [meridianMenuOpen,  setMeridianMenuOpen]  = useState(false)
   const [newArcMeridianId,  setNewArcMeridianId]  = useState(null)
 
   const meridianMenuRef = useRef(null)
+
+  // ── Load board data ───────────────────────────────────────────────────────
+  useEffect(() => {
+    api.get('/api/board')
+      .then((data) => {
+        setMeridians(data.meridians)
+        setStatuses(data.statuses)
+        setSprints(data.sprints)
+        setUsers(data.users)
+        setItems(data.items)
+        // Start with all episodes expanded
+        setExpanded(new Set(data.items.filter((i) => i.type === 'episode').map((i) => i.id)))
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
 
   // Close meridian menu on outside click
   useEffect(() => {
@@ -158,8 +160,20 @@ export default function Board() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const itemMap      = useMemo(() => toMap(items),     [items])
-  const meridianMap  = useMemo(() => toMap(meridians), [meridians])
+  // ── Derived maps ──────────────────────────────────────────────────────────
+  const itemMap     = useMemo(() => toMap(items),     [items])
+  const meridianMap = useMemo(() => toMap(meridians), [meridians])
+  const statusMap   = useMemo(() => toMap(statuses),  [statuses])
+  const userMap     = useMemo(() => toMap(users),     [users])
+  const sprintMap   = useMemo(() => toMap(sprints),   [sprints])
+
+  const sortedSprints = useMemo(() =>
+    [...sprints].sort((a, b) => {
+      const order = { active: 0, planning: 1, complete: 2 }
+      return order[a.state] - order[b.state]
+    }),
+    [sprints]
+  )
 
   // Arcs grouped by meridian, for the Meridian dropdown
   const arcsByMeridian = useMemo(() => {
@@ -180,24 +194,17 @@ export default function Board() {
     return map
   }, [items])
 
-  // Arc and Episode lists for the filter bar — derived from live items state
-  // so newly created arcs/episodes appear immediately in the filters
+  // Arc and Episode lists for the filter bar
   const filterArcs = useMemo(() =>
-    items
-      .filter((i) => i.type === 'arc')
-      .map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
+    items.filter((i) => i.type === 'arc').map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
     [items]
   )
 
   const allFilterEpisodes = useMemo(() =>
-    items
-      .filter((i) => i.type === 'episode')
-      .map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
+    items.filter((i) => i.type === 'episode').map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
     [items]
   )
 
-  // Episode options cascade from selected Arcs — if Arcs are selected, only
-  // show Episodes that belong to those Arcs. Otherwise show all.
   const filterEpisodes = useMemo(() =>
     filters.arcIds.length > 0
       ? allFilterEpisodes.filter((ep) => filters.arcIds.includes(ep.parentId))
@@ -206,22 +213,19 @@ export default function Board() {
   )
 
   // ── Sprint groups ──────────────────────────────────────────────────────────
-  // Each group contains the sprint and its filtered items.
-  // If a sprint filter is active, only that sprint's group is included.
-  const sprintGroups = useMemo(() => {
-    return SORTED_SPRINTS
+  const sprintGroups = useMemo(() =>
+    sortedSprints
       .map((sprint) => ({
         sprint,
         items: items
           .filter((i) => i.sprintId === sprint.id && matchesFilters(i, filters, itemMap))
           .sort((a, b) => a.position - b.position),
       }))
-      .filter((g) => filters.sprintId === null || filters.sprintId === g.sprint.id)
-  }, [items, filters, itemMap])
+      .filter((g) => filters.sprintId === null || filters.sprintId === g.sprint.id),
+    [items, filters, itemMap, sortedSprints]
+  )
 
   // ── Backlog rows ───────────────────────────────────────────────────────────
-  // Items with no sprint, shown as a collapsible tree.
-  // Hidden entirely if a sprint filter is active.
   const backlogRows = useMemo(() => {
     if (filters.sprintId !== null) return []
     const backlogItems = items.filter((i) => i.sprintId === null && i.type !== 'arc')
@@ -235,6 +239,7 @@ export default function Board() {
     : []
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+
   const handleToggle = useCallback((id) => {
     setExpanded((prev) => {
       const next = new Set(prev)
@@ -251,16 +256,20 @@ export default function Board() {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item
-        const idx     = MOCK_STATUSES.findIndex((s) => s.id === item.statusId)
-        const nextIdx = (idx + 1) % MOCK_STATUSES.length
-        return { ...item, statusId: MOCK_STATUSES[nextIdx].id }
+        const meridianStatuses = statuses
+          .filter((s) => s.meridianId === item.meridianId)
+          .sort((a, b) => a.position - b.position)
+        if (!meridianStatuses.length) return item
+        const idx       = meridianStatuses.findIndex((s) => s.id === item.statusId)
+        const nextStatus = meridianStatuses[(idx + 1) % meridianStatuses.length]
+        api.patch(`/api/items/${id}`, { field: 'statusId', value: nextStatus.id }).catch(console.error)
+        return { ...item, statusId: nextStatus.id }
       })
     )
-  }, [])
+  }, [statuses])
 
   const handleUpdateItem = useCallback((id, field, value) => {
     setItems((prev) => {
-      // Helper: collect all descendant IDs of a given item
       function descendants(rootId) {
         const result = new Set()
         const queue = [rootId]
@@ -274,7 +283,6 @@ export default function Board() {
       }
 
       if (field === 'parentId') {
-        // Walk UP the new parent chain to find the Arc's meridianId
         const map = toMap(prev)
         let newMeridianId = map[id]?.meridianId ?? null
         let cur = value ? map[value] : null
@@ -282,17 +290,15 @@ export default function Board() {
           if (cur.type === 'arc') { newMeridianId = cur.meridianId; break }
           cur = cur.parentId ? map[cur.parentId] : null
         }
-        // Update this item and cascade meridianId DOWN to all descendants
         const desc = descendants(id)
         return prev.map((item) => {
-          if (item.id === id)      return { ...item, parentId: value, meridianId: newMeridianId }
-          if (desc.has(item.id))  return { ...item, meridianId: newMeridianId }
+          if (item.id === id)     return { ...item, parentId: value, meridianId: newMeridianId }
+          if (desc.has(item.id)) return { ...item, meridianId: newMeridianId }
           return item
         })
       }
 
       if (field === 'meridianId') {
-        // Cascade meridianId DOWN to all descendants
         const desc = descendants(id)
         return prev.map((item) => {
           if (item.id === id)     return { ...item, meridianId: value }
@@ -303,11 +309,12 @@ export default function Board() {
 
       return prev.map((item) => item.id === id ? { ...item, [field]: value } : item)
     })
+
+    api.patch(`/api/items/${id}`, { field, value }).catch(console.error)
   }, [])
 
   const handleDeleteItem = useCallback((id) => {
     setItems((prev) => {
-      // Collect all descendant IDs via BFS
       const toRemove = new Set([id])
       const queue = [id]
       while (queue.length) {
@@ -319,28 +326,70 @@ export default function Board() {
       return prev.filter((i) => !toRemove.has(i.id))
     })
     setSelectedId(null)
+    api.delete(`/api/items/${id}`).catch(console.error)
   }, [])
 
-  const handleAddMeridian = useCallback(({ name, slug, color }) => {
-    setMeridians((prev) => {
-      const maxId = prev.reduce((m, m2) => Math.max(m, m2.id), 0)
-      return [...prev, { id: maxId + 1, name, slug, color }]
-    })
+  const handleAddMeridian = useCallback(async ({ name, slug, color }) => {
+    try {
+      const created = await api.post('/api/meridians', { name, slug, color })
+      // Re-fetch board so seeded statuses are included
+      const data = await api.get('/api/board')
+      setMeridians(data.meridians)
+      setStatuses(data.statuses)
+      setSprints(data.sprints)
+      setUsers(data.users)
+      setItems(data.items)
+      return created
+    } catch (err) {
+      console.error('Failed to create meridian:', err)
+      throw err
+    }
   }, [])
 
-  const handleAddItem = useCallback((newItem) => {
-    setItems((prev) => [...prev, newItem])
-    // Auto-expand the new item's parent so it's immediately visible in the backlog
-    if (newItem.parentId) {
-      setExpanded((prev) => {
-        const next = new Set(prev)
-        next.add(newItem.parentId)
-        return next
-      })
+  const handleAddItem = useCallback(async (partialItem) => {
+    const tempId = -(Date.now())
+    const tempItem = { ...partialItem, id: tempId }
+    setItems((prev) => [...prev, tempItem])
+    if (partialItem.parentId) {
+      setExpanded((prev) => { const n = new Set(prev); n.add(partialItem.parentId); return n })
+    }
+    try {
+      const created = await api.post('/api/items', partialItem)
+      setItems((prev) => prev.map((i) => i.id === tempId ? created : i))
+      setSelectedId((prev) => prev === tempId ? created.id : prev)
+    } catch (err) {
+      console.error('Failed to create item:', err)
+      setItems((prev) => prev.filter((i) => i.id !== tempId))
     }
   }, [])
 
   const panelOpen = Boolean(selectedItem)
+
+  // ── Loading / error states ─────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <IconSextant size={28} className="text-meridian-600 animate-pulse" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-sm text-red-600 font-medium">Failed to load board</p>
+          <p className="text-xs text-gray-400 mt-1">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 text-xs bg-meridian-600 text-white rounded-md hover:bg-meridian-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
@@ -367,14 +416,12 @@ export default function Board() {
             <div className="absolute top-full left-0 mt-1 z-30 min-w-[260px] bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-[70vh] overflow-y-auto">
               {meridians.map((m, idx) => (
                 <div key={m.id} className={idx > 0 ? 'border-t border-gray-100 mt-1 pt-1' : ''}>
-                  {/* Meridian row */}
                   <div className="flex items-center gap-2 px-3 py-1.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
                     <span className="flex-1 font-medium text-sm text-gray-800 truncate">{m.name}</span>
                     <span className="text-2xs text-gray-400 shrink-0">/{m.slug}</span>
                   </div>
 
-                  {/* Arcs for this Meridian */}
                   {(arcsByMeridian[m.id] ?? []).map((arc) => (
                     <div key={arc.id} className="flex items-center gap-1.5 pl-7 pr-3 py-1 text-xs text-gray-600 hover:bg-gray-50">
                       <IconArc size={12} className="text-violet-500 shrink-0" />
@@ -387,7 +434,6 @@ export default function Board() {
                     </div>
                   ))}
 
-                  {/* Add Arc */}
                   <button
                     type="button"
                     onClick={() => { setNewArcMeridianId(m.id); setMeridianMenuOpen(false) }}
@@ -451,9 +497,9 @@ export default function Board() {
         meridians={meridians}
         arcs={filterArcs}
         episodes={filterEpisodes}
-        statuses={MOCK_STATUSES}
-        users={MOCK_USERS}
-        sprints={MOCK_SPRINTS}
+        statuses={statuses}
+        users={users}
+        sprints={sprints}
         filters={filters}
         onChange={setFilters}
       />
@@ -473,8 +519,8 @@ export default function Board() {
               selectedId={selectedId}
               onSelect={handleSelect}
               onStatusCycle={handleStatusCycle}
-              statusMap={STATUS_MAP}
-              userMap={USER_MAP}
+              statusMap={statusMap}
+              userMap={userMap}
               allItemMap={itemMap}
               defaultCollapsed={sprint.state === 'complete'}
             />
@@ -483,7 +529,6 @@ export default function Board() {
           {/* ── Backlog section ── */}
           {filters.sprintId === null && (
             <div>
-              {/* Backlog header */}
               <div
                 className="flex items-center gap-3 px-4 h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
                 onClick={() => setBacklogCollapsed((c) => !c)}
@@ -499,7 +544,6 @@ export default function Board() {
                 </span>
               </div>
 
-              {/* Backlog tree */}
               {!backlogCollapsed && (
                 backlogRows.length > 0
                   ? backlogRows.map((row) => (
@@ -513,8 +557,8 @@ export default function Board() {
                         onToggle={handleToggle}
                         onSelect={handleSelect}
                         onStatusCycle={handleStatusCycle}
-                        statusMap={STATUS_MAP}
-                        userMap={USER_MAP}
+                        statusMap={statusMap}
+                        userMap={userMap}
                         sprintMap={{}}
                         itemMap={itemMap}
                       />
@@ -543,9 +587,9 @@ export default function Board() {
             onClose={() => setSelectedId(null)}
             onUpdate={handleUpdateItem}
             onDelete={handleDeleteItem}
-            statusMap={STATUS_MAP}
-            userMap={USER_MAP}
-            sprintMap={toMap(MOCK_SPRINTS)}
+            statusMap={statusMap}
+            userMap={userMap}
+            sprintMap={sprintMap}
             meridianMap={meridianMap}
             itemMap={itemMap}
             childItems={childItems}
@@ -557,7 +601,7 @@ export default function Board() {
       {newWorkOpen && (
         <NewWorkModal
           items={items}
-          statuses={MOCK_STATUSES}
+          statuses={statuses}
           onAdd={handleAddItem}
           onClose={() => setNewWorkOpen(false)}
         />
@@ -576,7 +620,7 @@ export default function Board() {
         <NewArcModal
           meridian={meridianMap[newArcMeridianId]}
           items={items}
-          statuses={MOCK_STATUSES}
+          statuses={statuses}
           onAdd={handleAddItem}
           onClose={() => setNewArcMeridianId(null)}
         />

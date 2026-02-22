@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { X, ChevronDown, Trash2, AlertTriangle } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
 import Avatar from '../ui/Avatar'
-import { MOCK_ACTIVITY } from '../../mock/data'
 
 // Build breadcrumb trail by walking up parentId chain
 function buildBreadcrumb(item, itemMap, meridianMap) {
@@ -153,7 +152,7 @@ export default function SlidePanel({
 
   const Icon       = TYPE_ICONS[item.type]
   const breadcrumb = buildBreadcrumb(item, itemMap, meridianMap)
-  const activity   = MOCK_ACTIVITY[item.id] ?? []
+  const activity   = []
 
   // Derive option arrays from maps
   const statusOptions   = Object.values(statusMap).map((s) => ({ id: s.id,  label: s.name,        color: s.color }))
