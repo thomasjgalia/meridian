@@ -291,6 +291,133 @@ app.http('itemsUpdate', {
   },
 })
 
+// ── GET /api/items/:id/activity ───────────────────────────────────────────────
+
+app.http('itemsGetActivity', {
+  methods:   ['GET'],
+  authLevel: 'anonymous',
+  route:     'items/{id}/activity',
+  handler:   async (request, context) => {
+    const { caller, response } = requireAuth(request)
+    if (response) return response
+
+    const itemId = parseInt(request.params.id, 10)
+    if (!itemId) return { status: 400, jsonBody: { error: 'Invalid id' } }
+
+    try {
+      const userId = await resolveUser(caller)
+
+      const itemResult = await query(
+        `SELECT meridian_id FROM work_items WHERE id = @id AND is_active = 1`,
+        [{ name: 'id', type: sql.Int, value: itemId }]
+      )
+      if (itemResult.recordset.length === 0) {
+        return { status: 404, jsonBody: { error: 'Item not found' } }
+      }
+
+      const meridianId = itemResult.recordset[0].meridian_id
+      const role = await getMemberRole(userId, meridianId)
+      if (role === null) {
+        return { status: 403, jsonBody: { error: 'Forbidden' } }
+      }
+
+      const result = await query(
+        `SELECT al.id, al.user_id, al.action, al.field_name,
+                al.old_value, al.new_value, al.note, al.created_at
+         FROM   activity_log al
+         WHERE  al.work_item_id = @itemId
+         ORDER  BY al.created_at ASC`,
+        [{ name: 'itemId', type: sql.Int, value: itemId }]
+      )
+
+      return {
+        status:   200,
+        jsonBody: result.recordset.map((r) => ({
+          id:        r.id,
+          userId:    r.user_id,
+          action:    r.action,
+          fieldName: r.field_name,
+          oldValue:  r.old_value,
+          newValue:  r.new_value,
+          note:      r.note,
+          createdAt: r.created_at,
+        })),
+      }
+    } catch (err) {
+      context.error(`GET /api/items/${itemId}/activity failed:`, err)
+      return { status: 500, jsonBody: { error: 'Internal server error' } }
+    }
+  },
+})
+
+// ── POST /api/items/:id/activity ──────────────────────────────────────────────
+
+app.http('itemsAddComment', {
+  methods:   ['POST'],
+  authLevel: 'anonymous',
+  route:     'items/{id}/activity',
+  handler:   async (request, context) => {
+    const { caller, response } = requireAuth(request)
+    if (response) return response
+
+    const itemId = parseInt(request.params.id, 10)
+    if (!itemId) return { status: 400, jsonBody: { error: 'Invalid id' } }
+
+    let body
+    try { body = await request.json() } catch {
+      return { status: 400, jsonBody: { error: 'Invalid JSON' } }
+    }
+
+    const { note } = body
+    if (!note?.trim()) return { status: 400, jsonBody: { error: 'note is required' } }
+
+    try {
+      const userId = await resolveUser(caller)
+
+      const itemResult = await query(
+        `SELECT meridian_id FROM work_items WHERE id = @id AND is_active = 1`,
+        [{ name: 'id', type: sql.Int, value: itemId }]
+      )
+      if (itemResult.recordset.length === 0) {
+        return { status: 404, jsonBody: { error: 'Item not found' } }
+      }
+
+      const meridianId = itemResult.recordset[0].meridian_id
+      const role = await getMemberRole(userId, meridianId)
+      if (!canWrite(role)) {
+        return { status: 403, jsonBody: { error: role === null ? 'Forbidden' : 'Viewers cannot comment' } }
+      }
+
+      const result = await query(
+        `INSERT INTO activity_log (work_item_id, meridian_id, user_id, action, note)
+         OUTPUT INSERTED.id, INSERTED.user_id, INSERTED.action, INSERTED.note, INSERTED.created_at
+         VALUES (@itemId, @meridianId, @userId, 'commented', @note)`,
+        [
+          { name: 'itemId',     type: sql.Int,      value: itemId      },
+          { name: 'meridianId', type: sql.Int,      value: meridianId  },
+          { name: 'userId',     type: sql.Int,      value: userId      },
+          { name: 'note',       type: sql.NVarChar, value: note.trim() },
+        ]
+      )
+
+      const r = result.recordset[0]
+      return {
+        status:   201,
+        jsonBody: {
+          id:        r.id,
+          userId:    r.user_id,
+          action:    r.action,
+          note:      r.note,
+          createdAt: r.created_at,
+        },
+      }
+    } catch (err) {
+      context.error(`POST /api/items/${itemId}/activity failed:`, err)
+      return { status: 500, jsonBody: { error: 'Internal server error' } }
+    }
+  },
+})
+
 // ── DELETE /api/items/:id ──────────────────────────────────────────────────────
 
 app.http('itemsDelete', {

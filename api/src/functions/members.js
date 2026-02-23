@@ -47,6 +47,82 @@ app.http('membersGet', {
   },
 })
 
+// ── POST /api/meridians/{id}/members ─────────────────────────────────────────
+// Owner-only. Directly adds an already-registered user by their internal user ID.
+// Uses MERGE so re-adding a former member (or upgrading a viewer) works cleanly.
+
+app.http('membersAdd', {
+  methods:   ['POST'],
+  authLevel: 'anonymous',
+  route:     'meridians/{id}/members',
+  handler:   async (request, context) => {
+    const { caller, response } = requireAuth(request)
+    if (response) return response
+
+    const meridianId = parseInt(request.params.id)
+    const callerId   = await resolveUser(caller)
+
+    const callerRole = await getMemberRole(callerId, meridianId)
+    if (!canManage(callerRole)) {
+      return { status: 403, jsonBody: { error: 'Only owners can add members' } }
+    }
+
+    let body
+    try { body = await request.json() } catch {
+      return { status: 400, jsonBody: { error: 'Invalid JSON' } }
+    }
+
+    const { userId, role = 'member' } = body
+    if (!userId) return { status: 400, jsonBody: { error: 'userId is required' } }
+    if (!['owner', 'member', 'viewer'].includes(role)) {
+      return { status: 400, jsonBody: { error: 'role must be owner, member, or viewer' } }
+    }
+
+    const targetId = parseInt(userId)
+
+    // Verify target user exists and is active
+    const userResult = await query(
+      `SELECT id, display_name, email, avatar_url FROM users WHERE id = @targetId AND is_active = 1`,
+      [{ name: 'targetId', type: sql.Int, value: targetId }]
+    )
+    if (!userResult.recordset.length) {
+      return { status: 404, jsonBody: { error: 'User not found' } }
+    }
+    const u = userResult.recordset[0]
+
+    try {
+      await query(
+        `MERGE meridian_members AS target
+         USING (SELECT @meridianId AS meridian_id, @targetId AS user_id, @role AS role) AS source
+           ON  target.meridian_id = source.meridian_id AND target.user_id = source.user_id
+         WHEN NOT MATCHED THEN
+           INSERT (meridian_id, user_id, role) VALUES (source.meridian_id, source.user_id, source.role)
+         WHEN MATCHED THEN
+           UPDATE SET target.role = source.role;`,
+        [
+          { name: 'meridianId', type: sql.Int,     value: meridianId },
+          { name: 'targetId',   type: sql.Int,     value: targetId   },
+          { name: 'role',       type: sql.VarChar, value: role       },
+        ]
+      )
+
+      return {
+        status:   201,
+        jsonBody: {
+          userId:      u.id,
+          role,
+          displayName: u.display_name,
+          email:       u.email,
+          avatarUrl:   u.avatar_url,
+        },
+      }
+    } catch (err) {
+      context.error('POST /api/meridians/:id/members failed:', err)
+      return { status: 500, jsonBody: { error: 'Internal server error' } }
+    }
+  },
+})
+
 // ── PATCH /api/meridians/{id}/members/{targetUserId} ──────────────────────────
 // Owner-only. Cannot demote the last owner.
 

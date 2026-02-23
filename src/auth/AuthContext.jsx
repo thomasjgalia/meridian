@@ -33,6 +33,7 @@ function DevAuthProvider({ children }) {
     isAuthenticated,
     isLoading:       false,
     login:           () => setIsAuthenticated(true),
+    loginGoogle:     () => setIsAuthenticated(true),
     logout:          () => setIsAuthenticated(false),
     getToken:        async () => 'dev-token',
   }
@@ -68,6 +69,7 @@ function SwaAuthProvider({ children }) {
     isAuthenticated: !!user,
     isLoading:       user === undefined,
     login:           () => { window.location.href = '/.auth/login/aad' },
+    loginGoogle:     () => { window.location.href = '/.auth/login/google' },
     logout:          () => { window.location.href = '/.auth/logout' },
     getToken:        async () => null, // SWA injects auth headers for API calls automatically
   }

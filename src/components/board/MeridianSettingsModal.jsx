@@ -431,10 +431,19 @@ function StatusesTab({ meridian, statuses: initialStatuses, onStatusesChanged })
 
 // ── MembersTab ────────────────────────────────────────────────────────────────
 
-function MembersTab({ meridian, myUserId, onLeft }) {
+function MembersTab({ meridian, myUserId, allUsers = [], onLeft }) {
   const [members,        setMembers]        = useState([])
   const [membersLoading, setMembersLoading] = useState(true)
   const [error,          setError]          = useState(null)
+
+  // Add-member state
+  const [searchQuery,    setSearchQuery]    = useState('')
+  const [dropdownOpen,   setDropdownOpen]   = useState(false)
+  const [selectedUser,   setSelectedUser]   = useState(null)  // { id, displayName, email }
+  const [addRole,        setAddRole]        = useState('member')
+  const [adding,         setAdding]         = useState(false)
+  const [addError,       setAddError]       = useState(null)
+  const searchRef = useRef(null)
 
   useEffect(() => {
     api.get(`/api/meridians/${meridian.id}/members`)
@@ -443,7 +452,54 @@ function MembersTab({ meridian, myUserId, onLeft }) {
       .finally(() => setMembersLoading(false))
   }, [meridian.id])
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handler(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setDropdownOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   const ownerCount = members.filter((m) => m.role === 'owner').length
+
+  // Users not already in this meridian, filtered by the search query
+  const memberUserIds = new Set(members.map((m) => m.userId))
+  const searchResults = allUsers
+    .filter((u) => !memberUserIds.has(u.id))
+    .filter((u) => {
+      if (!searchQuery) return true
+      const q = searchQuery.toLowerCase()
+      return u.displayName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    })
+    .slice(0, 8)
+
+  function handleSelectUser(u) {
+    setSelectedUser(u)
+    setSearchQuery(u.displayName)
+    setDropdownOpen(false)
+    setAddError(null)
+  }
+
+  async function handleAdd() {
+    if (!selectedUser || adding) return
+    setAdding(true)
+    setAddError(null)
+    try {
+      const added = await api.post(`/api/meridians/${meridian.id}/members`, {
+        userId: selectedUser.id,
+        role:   addRole,
+      })
+      setMembers((prev) => [...prev, added])
+      setSelectedUser(null)
+      setSearchQuery('')
+      setAddRole('member')
+    } catch (err) {
+      setAddError(err.message)
+    } finally {
+      setAdding(false)
+    }
+  }
 
   async function handleRoleChange(targetUserId, newRole) {
     const prev = members
@@ -472,43 +528,114 @@ function MembersTab({ meridian, myUserId, onLeft }) {
   if (membersLoading) return <p className="text-sm text-gray-400 text-center py-8">Loading…</p>
 
   return (
-    <div className="flex flex-col gap-0.5">
-      {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
-      {members.map((m) => {
-        const isMe        = m.userId === myUserId
-        const isLastOwner = m.role === 'owner' && ownerCount <= 1
-        return (
-          <div key={m.userId} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50">
-            <Avatar user={{ displayName: m.displayName }} size={30} />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-800 truncate">
-                {m.displayName}
-                {isMe && <span className="ml-1.5 text-2xs text-gray-400 font-normal">you</span>}
+    <div className="flex flex-col gap-4">
+      {error && <p className="text-xs text-red-600">{error}</p>}
+
+      {/* Existing members */}
+      <div className="flex flex-col gap-0.5">
+        {members.map((m) => {
+          const isMe        = m.userId === myUserId
+          const isLastOwner = m.role === 'owner' && ownerCount <= 1
+          return (
+            <div key={m.userId} className="flex items-center gap-3 py-2 px-2 rounded-lg hover:bg-gray-50">
+              <Avatar user={{ displayName: m.displayName }} size={30} />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-800 truncate">
+                  {m.displayName}
+                  {isMe && <span className="ml-1.5 text-2xs text-gray-400 font-normal">you</span>}
+                </div>
+                <div className="text-2xs text-gray-400 truncate">{m.email}</div>
               </div>
-              <div className="text-2xs text-gray-400 truncate">{m.email}</div>
+              <select
+                value={m.role}
+                disabled={isLastOwner}
+                onChange={(e) => handleRoleChange(m.userId, e.target.value)}
+                className="text-xs border border-gray-200 rounded px-1.5 py-1 text-gray-700 bg-white disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-meridian-400"
+              >
+                <option value="owner">Owner</option>
+                <option value="member">Member</option>
+                <option value="viewer">Viewer</option>
+              </select>
+              <button
+                type="button"
+                disabled={isLastOwner}
+                onClick={() => handleRemove(m.userId)}
+                title={isMe ? 'Leave meridian' : 'Remove member'}
+                className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+              >
+                <UserMinus size={14} />
+              </button>
             </div>
+          )
+        })}
+      </div>
+
+      {/* Add member — only shown when there are non-members to add */}
+      {allUsers.some((u) => !memberUserIds.has(u.id)) && (
+        <div className="pt-3 border-t border-gray-100">
+          <div className="text-2xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Add member</div>
+          <div className="flex gap-2">
+
+            {/* Search input + dropdown */}
+            <div ref={searchRef} className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setSelectedUser(null)
+                  setDropdownOpen(true)
+                }}
+                onFocus={() => setDropdownOpen(true)}
+                placeholder="Search by name or email…"
+                className="w-full h-8 px-2.5 text-xs border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-meridian-500 hover:border-gray-400"
+              />
+
+              {dropdownOpen && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto">
+                  {searchResults.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); handleSelectUser(u) }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <Avatar user={u} size={22} />
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-gray-800 truncate">{u.displayName}</div>
+                        <div className="text-2xs text-gray-400 truncate">{u.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Role picker */}
             <select
-              value={m.role}
-              disabled={isLastOwner}
-              onChange={(e) => handleRoleChange(m.userId, e.target.value)}
-              className="text-xs border border-gray-200 rounded px-1.5 py-1 text-gray-700 bg-white disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-meridian-400"
+              value={addRole}
+              onChange={(e) => setAddRole(e.target.value)}
+              className="h-8 px-2 text-xs border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-meridian-500 shrink-0"
             >
-              <option value="owner">Owner</option>
               <option value="member">Member</option>
               <option value="viewer">Viewer</option>
+              <option value="owner">Owner</option>
             </select>
+
+            {/* Add button */}
             <button
               type="button"
-              disabled={isLastOwner}
-              onClick={() => handleRemove(m.userId)}
-              title={isMe ? 'Leave meridian' : 'Remove member'}
-              className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+              onClick={handleAdd}
+              disabled={!selectedUser || adding}
+              className="h-8 px-3 text-xs font-medium bg-meridian-600 text-white rounded-md hover:bg-meridian-700 disabled:opacity-40 transition-colors shrink-0"
             >
-              <UserMinus size={14} />
+              {adding ? '…' : 'Add'}
             </button>
           </div>
-        )
-      })}
+
+          {addError && <p className="text-xs text-red-600 mt-1.5">{addError}</p>}
+        </div>
+      )}
     </div>
   )
 }
@@ -638,7 +765,7 @@ function InvitationsTab({ meridian }) {
 
 // ── MeridianSettingsModal (shell) ─────────────────────────────────────────────
 
-export default function MeridianSettingsModal({ meridian: initialMeridian, myUserId, statuses, onClose, onSaved, onDeleted, onLeft, onStatusesChanged }) {
+export default function MeridianSettingsModal({ meridian: initialMeridian, myUserId, statuses, allUsers = [], onClose, onSaved, onDeleted, onLeft, onStatusesChanged }) {
   const [tab,      setTab]      = useState('general')
   const [meridian, setMeridian] = useState(initialMeridian)
 
@@ -698,6 +825,7 @@ export default function MeridianSettingsModal({ meridian: initialMeridian, myUse
             <MembersTab
               meridian={meridian}
               myUserId={myUserId}
+              allUsers={allUsers}
               onLeft={onLeft}
             />
           )}

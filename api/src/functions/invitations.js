@@ -235,14 +235,15 @@ app.http('invitationsAccept', {
       }
     }
 
-    // Upsert meridian_members — if already a member, leave role unchanged
+    // Upsert meridian_members — insert if new, upgrade viewer→member if re-invited at higher role
     await query(
-      `IF NOT EXISTS (
-         SELECT 1 FROM meridian_members
-         WHERE meridian_id = @meridianId AND user_id = @userId
-       )
-       INSERT INTO meridian_members (meridian_id, user_id, role)
-       VALUES (@meridianId, @userId, @role)`,
+      `MERGE meridian_members AS target
+       USING (SELECT @meridianId AS meridian_id, @userId AS user_id, @role AS role) AS source
+         ON  target.meridian_id = source.meridian_id AND target.user_id = source.user_id
+       WHEN NOT MATCHED THEN
+         INSERT (meridian_id, user_id, role) VALUES (source.meridian_id, source.user_id, source.role)
+       WHEN MATCHED AND target.role = 'viewer' AND source.role = 'member' THEN
+         UPDATE SET target.role = source.role;`,
       [
         { name: 'meridianId', type: sql.Int,     value: invitation.meridian_id },
         { name: 'userId',     type: sql.Int,     value: userId                 },

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Plus, ChevronRight, Settings } from 'lucide-react'
+import { Plus, ChevronRight, Settings, Download, Pencil, LogOut } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { api } from '../../api/client'
 import { IconSextant, IconArc, IconEpisode, IconSignal, IconRelay } from '../icons'
@@ -29,6 +29,52 @@ const HIERARCHY = [
   { Icon: IconSignal,  label: 'Signal',  color: 'text-teal-500'   },
   { Icon: IconRelay,   label: 'Relay',   color: 'text-orange-500' },
 ]
+
+// ── Arc section header ────────────────────────────────────────────────────────
+
+function ArcHeader({ arc, isExpanded, isSelected, onToggle, onSelect, onAddChild }) {
+  return (
+    <div
+      className={`
+        group/archdr flex items-center gap-2 px-4 h-8 border-b border-violet-100 cursor-pointer
+        transition-colors select-none
+        ${isSelected ? 'bg-violet-100' : 'bg-violet-50/50 hover:bg-violet-50'}
+      `}
+    >
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggle(arc.id) }}
+        className="flex items-center justify-center w-4 h-4 shrink-0 text-violet-400 hover:text-violet-600 transition-colors"
+      >
+        <ChevronRight
+          size={13}
+          className={`transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+        />
+      </button>
+
+      <IconArc size={13} className="text-violet-400 shrink-0" />
+
+      <button
+        type="button"
+        onClick={() => onSelect(arc.id)}
+        className="flex-1 text-left text-xs font-semibold text-violet-700 truncate hover:text-violet-900 transition-colors"
+      >
+        {arc.title}
+      </button>
+
+      {onAddChild && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onAddChild(arc) }}
+          title="Add Episode"
+          className="shrink-0 p-1 rounded text-violet-400 hover:text-violet-700 hover:bg-violet-100 opacity-0 group-hover/archdr:opacity-100 transition-all"
+        >
+          <Plus size={13} />
+        </button>
+      )}
+    </div>
+  )
+}
 
 // ── Backlog tree utilities ────────────────────────────────────────────────────
 
@@ -105,6 +151,111 @@ function buildBacklogRows(items, itemMap, expandedIds, filters) {
   return rows
 }
 
+// ── User menu (avatar → rename / sign out) ────────────────────────────────────
+
+function UserMenu({ displayName, email, userId, userMap, logout, onRename }) {
+  const [open,    setOpen]    = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [draft,   setDraft]   = useState('')
+  const [saving,  setSaving]  = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handler(e) {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false); setEditing(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // Use the DB name if available (reflects any previous rename)
+  const liveDisplayName = userMap[userId]?.displayName ?? displayName
+
+  async function handleSave() {
+    const name = draft.trim()
+    if (!name || name === liveDisplayName) { setEditing(false); return }
+    setSaving(true)
+    try {
+      await api.patch('/api/users/me', { displayName: name })
+      onRename(name)
+      setEditing(false)
+      setOpen(false)
+    } catch { /* silent — name stays unchanged */ }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div ref={ref} className="relative ml-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        title={liveDisplayName}
+        className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-meridian-400"
+      >
+        <Avatar user={{ displayName: liveDisplayName }} size={28} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 z-30 w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-2">
+
+          {/* Name + edit */}
+          <div className="px-3 pb-2.5 border-b border-gray-100">
+            {editing ? (
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <input
+                  autoFocus
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter')  handleSave()
+                    if (e.key === 'Escape') setEditing(false)
+                  }}
+                  className="flex-1 text-sm px-2 py-0.5 border border-meridian-400 rounded outline-none focus:ring-2 focus:ring-meridian-300"
+                />
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="text-xs font-medium text-meridian-600 hover:text-meridian-800 disabled:opacity-40"
+                >
+                  {saving ? '…' : 'Save'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 group/name mt-0.5">
+                <span className="flex-1 text-sm font-medium text-gray-800 truncate">
+                  {liveDisplayName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setDraft(liveDisplayName); setEditing(true) }}
+                  title="Edit display name"
+                  className="p-0.5 rounded text-gray-300 hover:text-gray-600 opacity-0 group-hover/name:opacity-100 transition-opacity"
+                >
+                  <Pencil size={11} />
+                </button>
+              </div>
+            )}
+            {email && <p className="text-xs text-gray-400 truncate mt-0.5">{email}</p>}
+          </div>
+
+          {/* Sign out */}
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors mt-0.5"
+          >
+            <LogOut size={13} />
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Board ─────────────────────────────────────────────────────────────────────
 
 const INITIAL_FILTERS = { meridianIds: [], arcIds: [], episodeIds: [], assigneeIds: [], statusIds: [], sprintId: null }
@@ -129,7 +280,11 @@ export default function Board() {
   // ── UI state ──────────────────────────────────────────────────────────────
   const [expanded,          setExpanded]          = useState(new Set())
   const [backlogCollapsed,  setBacklogCollapsed]  = useState(false)
-  const [selectedId,        setSelectedId]        = useState(null)
+  const [selectedId,        setSelectedId]        = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    const p = params.get('item')
+    return p ? parseInt(p, 10) : null
+  })
   const [filters,           setFilters]           = useState(INITIAL_FILTERS)
   const [activeMeridianId,  setActiveMeridianId]  = useState(null)
   const [newWorkOpen,       setNewWorkOpen]       = useState(false)
@@ -156,8 +311,8 @@ export default function Board() {
         setItems(data.items)
         setMyRoles(data.myRoles ?? {})
         setMyUserId(data.myUserId ?? null)
-        // Start with all episodes expanded
-        setExpanded(new Set(data.items.filter((i) => i.type === 'episode').map((i) => i.id)))
+        // Start with all arcs expanded — arcs are backlog section headers
+        setExpanded(new Set(data.items.filter((i) => i.type === 'arc').map((i) => i.id)))
         // Default to first meridian
         setActiveMeridianId((prev) => prev ?? data.meridians[0]?.id ?? null)
         setLoading(false)
@@ -249,13 +404,14 @@ export default function Board() {
   )
 
   // ── Sprint groups — scoped to active meridian ──────────────────────────────
+  // Arcs are never sprint items — they're containers that span many sprints.
   const sprintGroups = useMemo(() =>
     sortedSprints
       .filter((s) => !activeMeridianId || s.meridianId === activeMeridianId)
       .map((sprint) => ({
         sprint,
         items: items
-          .filter((i) => i.sprintId === sprint.id && matchesFilters(i, filters, itemMap))
+          .filter((i) => i.sprintId === sprint.id && i.type !== 'arc' && matchesFilters(i, filters, itemMap))
           .sort((a, b) => a.position - b.position),
       }))
       .filter((g) => filters.sprintId === null || filters.sprintId === g.sprint.id),
@@ -263,10 +419,11 @@ export default function Board() {
   )
 
   // ── Backlog rows — scoped to active meridian ────────────────────────────────
+  // Arcs always live in the backlog regardless of their sprintId.
   const backlogRows = useMemo(() => {
     if (filters.sprintId !== null) return []
     const backlogItems = items.filter((i) =>
-      i.sprintId === null && (!activeMeridianId || i.meridianId === activeMeridianId)
+      (i.sprintId === null || i.type === 'arc') && (!activeMeridianId || i.meridianId === activeMeridianId)
     )
     return buildBacklogRows(backlogItems, itemMap, expanded, filters)
   }, [items, itemMap, expanded, filters, activeMeridianId])
@@ -420,6 +577,12 @@ export default function Board() {
     setNewWorkOpen(true)
   }, [itemMap])
 
+  // ── User rename ───────────────────────────────────────────────────────────
+
+  const handleRename = useCallback((newName) => {
+    setUsers((prev) => prev.map((u) => u.id === myUserId ? { ...u, displayName: newName } : u))
+  }, [myUserId])
+
   // ── Meridian handlers ──────────────────────────────────────────────────────
 
   const handleAddMeridian = useCallback(async ({ name, slug, color }) => {
@@ -459,6 +622,70 @@ export default function Board() {
     // Unassign items locally
     setItems((prev) => prev.map((i) => i.sprintId === id ? { ...i, sprintId: null } : i))
   }, [])
+
+  // ── Export board to text ──────────────────────────────────────────────────
+
+  const handleExport = useCallback(() => {
+    const TYPE_LABEL = { arc: 'ARC', episode: 'EP ', signal: 'SIG', relay: 'REL' }
+    const SEP  = '─'.repeat(56)
+    const HSEP = '═'.repeat(56)
+
+    function fmtItem(item, depth) {
+      const indent    = '  '.repeat(depth)
+      const typeLabel = TYPE_LABEL[item.type] ?? item.type.toUpperCase()
+      const status    = statusMap[item.statusId]
+      const user      = userMap[item.assigneeId]
+      const parts     = [`${indent}[${typeLabel}] ${item.title}`]
+      if (status) parts.push(`[${status.name}]`)
+      if (user)   parts.push(user.displayName)
+      return parts.join('  ')
+    }
+
+    function renderTree(flatItems, lines) {
+      const ids        = new Set(flatItems.map((i) => i.id))
+      const childrenOf = {}
+      flatItems.forEach((item) => {
+        const key = item.parentId && ids.has(item.parentId) ? item.parentId : 'root'
+        if (!childrenOf[key]) childrenOf[key] = []
+        childrenOf[key].push(item)
+      })
+      Object.values(childrenOf).forEach((arr) => arr.sort((a, b) => a.position - b.position))
+      function dfs(children, depth) {
+        for (const item of children) {
+          lines.push(fmtItem(item, depth))
+          dfs(childrenOf[item.id] ?? [], depth + 1)
+        }
+      }
+      dfs(childrenOf['root'] ?? [], 0)
+    }
+
+    const date  = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    const lines = [HSEP, `MERIDIAN: ${activeMeridian?.name ?? 'All'}`, `Exported:  ${date}`, HSEP]
+
+    for (const { sprint, items: sItems } of sprintGroups) {
+      const done      = sItems.filter((i) => statusMap[i.statusId]?.isComplete).length
+      const dateRange = sprint.startDate && sprint.endDate
+        ? ` · ${new Date(sprint.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${new Date(sprint.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+        : ''
+      lines.push('', `SPRINT: ${sprint.name} [${sprint.state.toUpperCase()}]${dateRange} · ${done}/${sItems.length} done`, SEP)
+      renderTree(sItems, lines)
+    }
+
+    if (backlogRows.length > 0) {
+      lines.push('', `BACKLOG · ${backlogRows.length} item${backlogRows.length !== 1 ? 's' : ''}`, SEP)
+      for (const row of backlogRows) lines.push(fmtItem(row, row.depth))
+    }
+
+    const blob     = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
+    const url      = URL.createObjectURL(blob)
+    const anchor   = document.createElement('a')
+    anchor.href     = url
+    anchor.download = `meridian-${activeMeridian?.slug ?? 'all'}-${new Date().toISOString().slice(0, 10)}.txt`
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(url)
+  }, [activeMeridian, sprintGroups, backlogRows, statusMap, userMap])
 
   // ── Board reload helper (used after invite accept / member leave) ─────────
   const reloadBoard = useCallback(async () => {
@@ -608,6 +835,15 @@ export default function Board() {
 
         <div className="flex-1" />
 
+        <button
+          type="button"
+          onClick={handleExport}
+          title="Export to text"
+          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
+        >
+          <Download size={13} /> Export
+        </button>
+
         {userCanWrite && (
           <button
             type="button"
@@ -629,14 +865,14 @@ export default function Board() {
         )}
 
         {user && (
-          <button
-            type="button"
-            onClick={logout}
-            title={`${user.displayName} — click to sign out`}
-            className="ml-1"
-          >
-            <Avatar user={user} size={28} />
-          </button>
+          <UserMenu
+            displayName={user.displayName}
+            email={user.email}
+            userId={myUserId}
+            userMap={userMap}
+            logout={logout}
+            onRename={handleRename}
+          />
         )}
       </header>
 
@@ -671,6 +907,7 @@ export default function Board() {
               onStatusCycle={handleStatusCycle}
               onUpdate={userCanWrite ? handleUpdateSprint : undefined}
               onDelete={userCanWrite ? handleDeleteSprint : undefined}
+              onAddChild={userCanWrite ? handleAddChild : undefined}
               statusMap={statusMap}
               userMap={userMap}
               allItemMap={itemMap}
@@ -692,30 +929,45 @@ export default function Board() {
                 <span className="font-semibold text-sm text-gray-800">Backlog</span>
                 <div className="flex-1" />
                 <span className="text-xs text-gray-400">
-                  {backlogRows.length} item{backlogRows.length !== 1 ? 's' : ''}
+                  {(() => { const n = backlogRows.filter((r) => r.type !== 'arc').length; return `${n} item${n !== 1 ? 's' : ''}` })()}
                 </span>
               </div>
 
               {!backlogCollapsed && (
                 backlogRows.length > 0
-                  ? backlogRows.map((row) => (
-                      <WorkItemRow
-                        key={row.id}
-                        item={row}
-                        depth={row.depth}
-                        hasChildren={row.hasChildren}
-                        isExpanded={expanded.has(row.id)}
-                        isSelected={row.id === selectedId}
-                        onToggle={handleToggle}
-                        onSelect={handleSelect}
-                        onStatusCycle={handleStatusCycle}
-                        onAddChild={userCanWrite ? handleAddChild : undefined}
-                        statusMap={statusMap}
-                        userMap={userMap}
-                        sprintMap={sprintMap}
-                        itemMap={itemMap}
-                      />
-                    ))
+                  ? backlogRows.map((row) => {
+                      if (row.type === 'arc') {
+                        return (
+                          <ArcHeader
+                            key={row.id}
+                            arc={row}
+                            isExpanded={expanded.has(row.id)}
+                            isSelected={row.id === selectedId}
+                            onToggle={handleToggle}
+                            onSelect={handleSelect}
+                            onAddChild={userCanWrite ? handleAddChild : undefined}
+                          />
+                        )
+                      }
+                      return (
+                        <WorkItemRow
+                          key={row.id}
+                          item={row}
+                          depth={Math.max(0, row.depth - 1)}
+                          hasChildren={row.hasChildren}
+                          isExpanded={expanded.has(row.id)}
+                          isSelected={row.id === selectedId}
+                          onToggle={handleToggle}
+                          onSelect={handleSelect}
+                          onStatusCycle={handleStatusCycle}
+                          onAddChild={userCanWrite ? handleAddChild : undefined}
+                          statusMap={statusMap}
+                          userMap={userMap}
+                          sprintMap={sprintMap}
+                          itemMap={itemMap}
+                        />
+                      )
+                    })
                   : (
                     <div className="px-12 py-3 text-sm text-gray-400 italic bg-white border-b border-gray-100">
                       No backlog items match the current filters.
@@ -784,6 +1036,7 @@ export default function Board() {
           meridian={settingsMeridian}
           myUserId={myUserId}
           statuses={statuses}
+          allUsers={users}
           onClose={() => setSettingsMeridian(null)}
           onSaved={(updated) => {
             setMeridians((prev) => prev.map((m) => m.id === updated.id ? updated : m))

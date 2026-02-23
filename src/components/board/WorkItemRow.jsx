@@ -1,6 +1,6 @@
 import { ChevronRight, Plus } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
-import StatusChip from '../ui/StatusChip'
+import { StatusDot } from '../ui/StatusChip'
 import Avatar from '../ui/Avatar'
 
 // Left indent per depth level (px)
@@ -98,12 +98,9 @@ export default function WorkItemRow({
       {/* Assignee avatar */}
       <Avatar user={user} size={20} className="shrink-0" />
 
-      {/* Status chip */}
+      {/* Status indicator */}
       <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-        <StatusChip
-          status={status}
-          onClick={() => onStatusCycle(item.id)}
-        />
+        <StatusDot status={status} onClick={() => onStatusCycle(item.id)} />
       </div>
 
       {/* Add child button — visible on hover for non-relay items */}

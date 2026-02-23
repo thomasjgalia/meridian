@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, ChevronDown, Trash2, AlertTriangle, Check } from 'lucide-react'
+import { X, ChevronDown, Trash2, AlertTriangle, Check, ExternalLink, Send } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
 import Avatar from '../ui/Avatar'
+import { api } from '../../api/client'
 
 // Build breadcrumb trail by walking up parentId chain
 function buildBreadcrumb(item, itemMap, meridianMap) {
@@ -16,25 +17,36 @@ function buildBreadcrumb(item, itemMap, meridianMap) {
   return trail
 }
 
-function ActivityEntry({ entry, userMap }) {
+function ActivityEntry({ entry, userMap, statusMap }) {
   const user = userMap[entry.userId]
   const time = new Date(entry.createdAt).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
   })
 
   let text = ''
-  if (entry.action === 'created')             text = 'created this item'
-  else if (entry.action === 'status_changed') text = `changed status from "${entry.oldValue}" to "${entry.newValue}"`
-  else if (entry.action === 'assigned')       text = entry.newValue ? `assigned to ${entry.newValue}` : 'removed assignee'
-  else if (entry.action === 'edited')         text = `updated ${entry.fieldName}`
-  else if (entry.action === 'commented')      text = entry.note
+  if (entry.action === 'created') {
+    text = 'created this item'
+  } else if (entry.action === 'status_changed') {
+    const newStatus = statusMap?.[parseInt(entry.newValue)]
+    text = `changed status to "${newStatus?.name ?? entry.newValue}"`
+  } else if (entry.action === 'assigned') {
+    const assignee = entry.newValue ? userMap[parseInt(entry.newValue)] : null
+    text = assignee ? `assigned to ${assignee.displayName}` : 'removed assignee'
+  } else if (entry.action === 'edited') {
+    text = `updated ${entry.fieldName}`
+  } else if (entry.action === 'commented') {
+    text = entry.note
+  }
 
   return (
     <div className="flex gap-2.5 text-xs">
       <Avatar user={user} size={20} className="mt-0.5 shrink-0" />
       <div className="flex-1 min-w-0">
         <span className="text-gray-800 font-medium">{user?.displayName}</span>
-        <span className="text-gray-500"> {text}</span>
+        {entry.action === 'commented'
+          ? <p className="text-gray-600 mt-0.5 whitespace-pre-wrap">{text}</p>
+          : <span className="text-gray-500"> {text}</span>
+        }
         <div className="text-gray-400 mt-0.5">{time}</div>
       </div>
     </div>
@@ -254,20 +266,55 @@ export default function SlidePanel({
   childItems,
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [activity,          setActivity]          = useState([])
+  const [activityLoading,   setActivityLoading]   = useState(false)
+  const [comment,           setComment]           = useState('')
+  const [submitting,        setSubmitting]        = useState(false)
 
-  // Reset delete confirmation whenever the selected item changes
-  useEffect(() => { setShowDeleteConfirm(false) }, [item?.id])
+  // Reset delete confirmation and reload activity whenever the selected item changes
+  useEffect(() => {
+    setShowDeleteConfirm(false)
+    setComment('')
+  }, [item?.id])
+
+  useEffect(() => {
+    if (!item?.id) return
+    setActivity([])
+    setActivityLoading(true)
+    api.get(`/api/items/${item.id}/activity`)
+      .then(setActivity)
+      .catch(() => {})
+      .finally(() => setActivityLoading(false))
+  }, [item?.id])
+
+  async function handleComment(e) {
+    e.preventDefault()
+    const text = comment.trim()
+    if (!text || submitting) return
+    setSubmitting(true)
+    try {
+      await api.post(`/api/items/${item.id}/activity`, { note: text })
+      setComment('')
+      const updated = await api.get(`/api/items/${item.id}/activity`)
+      setActivity(updated)
+    } catch { /* ignore */ }
+    finally { setSubmitting(false) }
+  }
 
   if (!item) return null
 
   const Icon       = TYPE_ICONS[item.type]
   const breadcrumb = buildBreadcrumb(item, itemMap, meridianMap)
-  const activity   = []
 
   // Derive option arrays from maps
-  const statusOptions   = Object.values(statusMap).map((s) => ({ id: s.id,  label: s.name,        color: s.color }))
+  const statusOptions   = Object.values(statusMap)
+    .filter((s) => s.meridianId === item.meridianId)
+    .sort((a, b) => a.position - b.position)
+    .map((s) => ({ id: s.id, label: s.name, color: s.color }))
   const userOptions     = Object.values(userMap).map((u)   => ({ id: u.id,  label: u.displayName, user: u        }))
-  const sprintOptions   = Object.values(sprintMap).map((s) => ({ id: s.id,  label: s.name                        }))
+  const sprintOptions   = Object.values(sprintMap)
+    .filter((s) => s.meridianId === item.meridianId)
+    .map((s) => ({ id: s.id, label: s.name }))
   const meridianOptions = Object.values(meridianMap).map((m) => ({ id: m.id, label: m.name,       color: m.color }))
 
   // Parent options — type depends on item type
@@ -281,6 +328,12 @@ export default function SlidePanel({
     : []
 
   function update(field, value) { onUpdate?.(item.id, field, value) }
+
+  function handleOpenNewWindow() {
+    const url = new URL(window.location.href)
+    url.search = `?item=${item.id}`
+    window.open(url.toString(), '_blank')
+  }
 
   return (
     <div className="flex flex-col h-full bg-white overflow-y-auto">
@@ -304,6 +357,14 @@ export default function SlidePanel({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
+          <button
+            type="button"
+            onClick={handleOpenNewWindow}
+            className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            title="Open in new window"
+          >
+            <ExternalLink size={14} />
+          </button>
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
@@ -392,16 +453,18 @@ export default function SlidePanel({
             />
           </div>
 
-          {/* Sprint */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-2xs text-gray-400 uppercase tracking-wider">Sprint</span>
-            <EditSelect
-              value={item.sprintId}
-              onChange={(v) => update('sprintId', v)}
-              options={sprintOptions}
-              nullLabel="None"
-            />
-          </div>
+          {/* Sprint — arcs span multiple sprints and are never sprint-assigned */}
+          {item.type !== 'arc' && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-2xs text-gray-400 uppercase tracking-wider">Sprint</span>
+              <EditSelect
+                value={item.sprintId}
+                onChange={(v) => update('sprintId', v)}
+                options={sprintOptions}
+                nullLabel="None"
+              />
+            </div>
+          )}
 
           {/* Meridian — only shown for Arcs, which directly own it */}
           {item.type === 'arc' && (
@@ -488,16 +551,39 @@ export default function SlidePanel({
 
       {/* Activity */}
       <Section title="Activity">
-        {activity.length > 0
-          ? (
-            <div className="flex flex-col gap-3">
-              {activity.map((entry) => (
-                <ActivityEntry key={entry.id} entry={entry} userMap={userMap} />
-              ))}
-            </div>
-          )
-          : <p className="text-xs text-gray-400 italic">No activity yet.</p>
+        {activityLoading
+          ? <p className="text-xs text-gray-400 italic">Loading…</p>
+          : activity.length > 0
+            ? (
+              <div className="flex flex-col gap-3">
+                {activity.map((entry) => (
+                  <ActivityEntry key={entry.id} entry={entry} userMap={userMap} statusMap={statusMap} />
+                ))}
+              </div>
+            )
+            : <p className="text-xs text-gray-400 italic">No activity yet.</p>
         }
+
+        {/* Comment form — writers only */}
+        {onUpdate && (
+          <form onSubmit={handleComment} className="flex gap-2 mt-3">
+            <input
+              type="text"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a comment…"
+              className="flex-1 text-xs px-2.5 py-1.5 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-meridian-400 focus:border-transparent"
+            />
+            <button
+              type="submit"
+              disabled={!comment.trim() || submitting}
+              className="px-2.5 py-1.5 rounded bg-meridian-600 text-white text-xs font-medium disabled:opacity-40 hover:bg-meridian-700 transition-colors"
+              title="Post comment"
+            >
+              <Send size={12} />
+            </button>
+          </form>
+        )}
       </Section>
 
     </div>

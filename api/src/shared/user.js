@@ -15,9 +15,9 @@ async function resolveUser(caller) {
      ON target.azure_oid = source.azure_oid
      WHEN MATCHED THEN
        UPDATE SET
-         last_login   = GETUTCDATE(),
-         email        = source.email,
-         display_name = source.display_name
+         last_login = GETUTCDATE(),
+         email      = source.email
+         -- display_name is intentionally not updated on login so users can customise it
      WHEN NOT MATCHED THEN
        INSERT (azure_oid, tenant_id, email, display_name, created_at, last_login, is_active)
        VALUES (source.azure_oid, source.tenant_id, source.email, source.display_name,

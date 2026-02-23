@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { ChevronRight, Pencil } from 'lucide-react'
+import { ChevronRight, Pencil, Plus } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
-import StatusChip from '../ui/StatusChip'
+import { StatusDot } from '../ui/StatusChip'
 import Avatar from '../ui/Avatar'
 import SprintEditModal from './SprintEditModal'
+
+// Types that can have children added inline
+const CAN_ADD_CHILD = { arc: true, episode: true, signal: true }
 
 const TYPE_COLOR = {
   arc:     'text-violet-500',
@@ -65,6 +68,7 @@ function SprintItemRow({
   onSelect,
   onToggle,
   onStatusCycle,
+  onAddChild,
   statusMap,
   userMap,
 }) {
@@ -112,9 +116,22 @@ function SprintItemRow({
 
       <Avatar user={user} size={18} className="shrink-0" />
 
+      {/* Status indicator */}
       <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-        <StatusChip status={status} onClick={() => onStatusCycle(row.id)} />
+        <StatusDot status={status} onClick={() => onStatusCycle(row.id)} />
       </div>
+
+      {/* Add child button — visible on hover for non-relay items */}
+      {CAN_ADD_CHILD[row.type] && onAddChild && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onAddChild(row) }}
+          title={`Add ${row.type === 'arc' ? 'Episode' : row.type === 'episode' ? 'Signal' : 'Relay'}`}
+          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-40 group-hover:opacity-100 transition-all"
+        >
+          <Plus size={15} />
+        </button>
+      )}
     </div>
   )
 }
@@ -127,6 +144,7 @@ export default function SprintSection({
   onStatusCycle,
   onUpdate,
   onDelete,
+  onAddChild,
   statusMap,
   userMap,
   allItemMap,
@@ -227,6 +245,7 @@ export default function SprintSection({
                 onSelect={onSelect}
                 onToggle={handleToggle}
                 onStatusCycle={onStatusCycle}
+                onAddChild={onAddChild}
                 statusMap={statusMap}
                 userMap={userMap}
               />
