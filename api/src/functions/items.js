@@ -326,7 +326,7 @@ app.http('itemsGetActivity', {
                 al.old_value, al.new_value, al.note, al.created_at
          FROM   activity_log al
          WHERE  al.work_item_id = @itemId
-         ORDER  BY al.created_at ASC`,
+         ORDER  BY al.created_at DESC`,
         [{ name: 'itemId', type: sql.Int, value: itemId }]
       )
 

@@ -68,8 +68,14 @@ function SwaAuthProvider({ children }) {
     user,
     isAuthenticated: !!user,
     isLoading:       user === undefined,
-    login:           () => { window.location.href = '/.auth/login/aad' },
-    loginGoogle:     () => { window.location.href = '/.auth/login/google' },
+    login:           () => {
+      const redir = encodeURIComponent(window.location.pathname + window.location.search)
+      window.location.href = `/.auth/login/aad?post_login_redirect_uri=${redir}`
+    },
+    loginGoogle:     () => {
+      const redir = encodeURIComponent(window.location.pathname + window.location.search)
+      window.location.href = `/.auth/login/google?post_login_redirect_uri=${redir}`
+    },
     logout:          () => { window.location.href = '/.auth/logout' },
     getToken:        async () => null, // SWA injects auth headers for API calls automatically
   }

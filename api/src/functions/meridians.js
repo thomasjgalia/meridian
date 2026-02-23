@@ -58,8 +58,8 @@ app.http('meridiansCreate', {
          VALUES
            (@mid, 'Standby', '#94A3B8', 0, 1, 0, 0),
            (@mid, 'Live',    '#3B82F6', 1, 0, 0, 0),
-           (@mid, 'Static',  '#F59E0B', 2, 0, 0, 1),
-           (@mid, 'Over',    '#10B981', 3, 0, 1, 0)`,
+           (@mid, 'Static',  '#E11A0A', 2, 0, 0, 1),
+           (@mid, 'Over',    '#23F014', 3, 0, 1, 0)`,
         [{ name: 'mid', type: sql.Int, value: meridian.id }]
       )
 

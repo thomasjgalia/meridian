@@ -839,9 +839,9 @@ export default function Board() {
           type="button"
           onClick={handleExport}
           title="Export to text"
-          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
+          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 transition-colors"
         >
-          <Download size={13} /> Export
+          <Download size={13} />
         </button>
 
         {userCanWrite && (
@@ -850,7 +850,7 @@ export default function Board() {
             onClick={() => setNewSprintOpen(true)}
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
           >
-            <Plus size={13} /> New Sprint
+            <Plus size={13} /> Sprint
           </button>
         )}
 
@@ -860,7 +860,7 @@ export default function Board() {
             onClick={() => { setNewWorkContext(null); setNewWorkOpen(true) }}
             className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
           >
-            <Plus size={13} /> New Work
+            <Plus size={13} /> Work
           </button>
         )}
 
