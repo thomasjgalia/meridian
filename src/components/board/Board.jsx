@@ -36,7 +36,7 @@ function ArcHeader({ arc, isExpanded, isSelected, onToggle, onSelect, onAddChild
   return (
     <div
       className={`
-        group/archdr flex items-center gap-2 px-4 h-8 border-b border-violet-100 cursor-pointer
+        group/archdr flex items-center gap-2 board-px h-8 border-b border-violet-100 cursor-pointer
         transition-colors select-none
         ${isSelected ? 'bg-violet-100' : 'bg-violet-50/50 hover:bg-violet-50'}
       `}
@@ -736,7 +736,7 @@ export default function Board() {
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
 
       {/* ── Top bar ── */}
-      <header className="flex items-center gap-3 px-4 h-12 border-b border-gray-200 bg-white shrink-0">
+      <header className="flex items-center gap-3 board-px h-12 border-b border-gray-200 bg-white shrink-0">
         {/* ── Meridian switcher ── */}
         <div ref={meridianMenuRef} className="relative flex items-center gap-1.5 shrink-0">
           <button
@@ -919,7 +919,7 @@ export default function Board() {
           {filters.sprintId === null && (
             <div>
               <div
-                className="flex items-center gap-3 px-4 h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
+                className="flex items-center gap-3 board-px h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
                 onClick={() => setBacklogCollapsed((c) => !c)}
               >
                 <ChevronRight
@@ -1001,6 +1001,12 @@ export default function Board() {
           />
         </div>
       </div>
+
+      {/* ── Footer ── */}
+      <footer className="shrink-0 flex items-center justify-center gap-2 h-7 border-t border-gray-200 bg-white">
+        <span className="text-2xs text-gray-400">Meridian Work Management | ©<a href="https://turnstone.ltd" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 transition-colors">Turnstone.ltd</a> 2026</span>
+        <img src="/turnstone.stone.png" alt="Turnstone" className="h-4 w-auto opacity-60" />
+      </footer>
 
       {/* ── New Work modal ── */}
       {newWorkOpen && (

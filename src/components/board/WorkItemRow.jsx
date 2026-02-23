@@ -5,13 +5,12 @@ import Avatar from '../ui/Avatar'
 
 // Left indent per depth level (px)
 const INDENT = 20
-const BASE_INDENT = 8
 
 // Subtle icon color per type
 const TYPE_COLOR = {
-  arc:     'text-violet-500',
+  arc:     'text-violet-600',
   episode: 'text-indigo-600',
-  signal:  'text-teal-500',
+  signal:  'text-teal-600',
   relay:   'text-orange-500',
 }
 
@@ -39,24 +38,24 @@ export default function WorkItemRow({
   const sprint     = sprintMap[item.sprintId]
   const parentItem = item.parentId ? itemMap[item.parentId] : null
 
-  const indentPx = BASE_INDENT + depth * INDENT
+  const indentPx = `calc(var(--board-px) + ${depth * INDENT}px)`
 
   return (
     <div
       onClick={() => onSelect(item.id)}
       className={`
-        group flex items-center gap-2 row-height border-b border-gray-100 cursor-pointer
-        hover:bg-gray-50 transition-colors text-sm
+        group flex items-center gap-2.5 sm:gap-2 row-height border-b border-gray-100 cursor-pointer
+        hover:bg-gray-50 transition-colors text-base sm:text-sm
         ${isSelected ? 'bg-meridian-50' : 'bg-white'}
       `}
-      style={{ paddingLeft: indentPx, paddingRight: 12 }}
+      style={{ paddingLeft: indentPx, paddingRight: 'var(--board-px)' }}
     >
       {/* Expand / collapse toggle */}
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onToggle(item.id) }}
         className={`
-          flex items-center justify-center w-4 h-4 shrink-0 rounded
+          flex items-center justify-center w-5 h-5 sm:w-4 sm:h-4 shrink-0 rounded
           text-gray-400 hover:text-gray-600 transition-colors
           ${!hasChildren ? 'invisible' : ''}
         `}
@@ -69,7 +68,7 @@ export default function WorkItemRow({
 
       {/* Type icon */}
       {Icon && (
-        <Icon size={17} className={`shrink-0 ${TYPE_COLOR[item.type]}`} />
+        <Icon className={`shrink-0 w-6 h-6 sm:w-5 sm:h-5 ${TYPE_COLOR[item.type]}`} />
       )}
 
       {/* Title */}
@@ -96,10 +95,10 @@ export default function WorkItemRow({
       )}
 
       {/* Assignee avatar */}
-      <Avatar user={user} size={20} className="shrink-0" />
+      <Avatar user={user} size={24} className="shrink-0 sm:w-5 sm:h-5" />
 
       {/* Status indicator */}
-      <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+      <div onClick={(e) => e.stopPropagation()} className="shrink-0 p-2 -m-2 sm:p-0 sm:m-0">
         <StatusDot status={status} onClick={() => onStatusCycle(item.id)} />
       </div>
 
@@ -109,9 +108,9 @@ export default function WorkItemRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(item) }}
           title={`Add ${item.type === 'arc' ? 'Episode' : item.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-40 group-hover:opacity-100 transition-all"
+          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all"
         >
-          <Plus size={15} />
+          <Plus size={17} />
         </button>
       )}
     </div>

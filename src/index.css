@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --board-px: 1.5rem; /* 24px — change here to adjust all board horizontal padding */
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -34,5 +38,17 @@
   .row-height {
     height: 32px;
     min-height: 32px;
+  }
+
+  .board-px {
+    padding-left:  var(--board-px);
+    padding-right: var(--board-px);
+  }
+}
+
+@media (max-width: 639px) {
+  .row-height {
+    height: 48px;
+    min-height: 48px;
   }
 }

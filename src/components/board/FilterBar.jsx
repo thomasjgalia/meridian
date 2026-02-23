@@ -217,7 +217,7 @@ function FilterDropdown({ arcs, episodes, statuses, users, sprints, filters, onC
 
 export default function FilterBar({ meridians, activeMeridianId, onMeridianChange, arcs, episodes, statuses, users, sprints, filters, onChange }) {
   return (
-    <div className="flex items-center gap-2 px-4 h-9 border-b border-gray-200 bg-white shrink-0">
+    <div className="flex items-center gap-2 board-px h-9 border-b border-gray-200 bg-white shrink-0">
       <MeridianSwitcher
         meridians={meridians}
         activeMeridianId={activeMeridianId}

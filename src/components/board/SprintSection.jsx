@@ -9,9 +9,9 @@ import SprintEditModal from './SprintEditModal'
 const CAN_ADD_CHILD = { arc: true, episode: true, signal: true }
 
 const TYPE_COLOR = {
-  arc:     'text-violet-500',
+  arc:     'text-violet-600',
   episode: 'text-indigo-600',
-  signal:  'text-teal-500',
+  signal:  'text-teal-600',
   relay:   'text-orange-500',
 }
 
@@ -23,8 +23,7 @@ const STATE_BADGE = {
 
 const STATE_CYCLE = { planning: 'active', active: 'complete', complete: 'planning' }
 
-const INDENT      = 20
-const BASE_INDENT = 12
+const INDENT = 20
 
 function formatDate(str) {
   if (!str) return ''
@@ -80,18 +79,18 @@ function SprintItemRow({
     <div
       onClick={() => onSelect(row.id)}
       className={`
-        group flex items-center gap-2 row-height border-b border-gray-100 cursor-pointer
-        hover:bg-gray-50 transition-colors text-sm
+        group flex items-center gap-2.5 sm:gap-2 row-height border-b border-gray-100 cursor-pointer
+        hover:bg-gray-50 transition-colors text-base sm:text-sm
         ${isSelected ? 'bg-meridian-50' : 'bg-white'}
       `}
-      style={{ paddingLeft: BASE_INDENT + row.depth * INDENT, paddingRight: 12 }}
+      style={{ paddingLeft: `calc(var(--board-px) + ${row.depth * INDENT}px)`, paddingRight: 'var(--board-px)' }}
     >
       {/* Expand / collapse toggle */}
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); onToggle(row.id) }}
         className={`
-          flex items-center justify-center w-4 h-4 shrink-0 rounded
+          flex items-center justify-center w-5 h-5 sm:w-4 sm:h-4 shrink-0 rounded
           text-gray-400 hover:text-gray-600 transition-colors
           ${!row.hasChildren ? 'invisible' : ''}
         `}
@@ -102,7 +101,7 @@ function SprintItemRow({
         />
       </button>
 
-      {Icon && <Icon size={16} className={`shrink-0 ${TYPE_COLOR[row.type]}`} />}
+      {Icon && <Icon className={`shrink-0 w-6 h-6 sm:w-5 sm:h-5 ${TYPE_COLOR[row.type]}`} />}
 
       <span className={`flex-1 truncate min-w-0 ${status?.isComplete ? 'line-through text-gray-400' : 'text-gray-800'}`}>
         {row.title}
@@ -114,10 +113,10 @@ function SprintItemRow({
         </span>
       )}
 
-      <Avatar user={user} size={18} className="shrink-0" />
+      <Avatar user={user} size={24} className="shrink-0 sm:w-5 sm:h-5" />
 
       {/* Status indicator */}
-      <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+      <div onClick={(e) => e.stopPropagation()} className="shrink-0 p-2 -m-2 sm:p-0 sm:m-0">
         <StatusDot status={status} onClick={() => onStatusCycle(row.id)} />
       </div>
 
@@ -127,9 +126,9 @@ function SprintItemRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(row) }}
           title={`Add ${row.type === 'arc' ? 'Episode' : row.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-40 group-hover:opacity-100 transition-all"
+          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all"
         >
-          <Plus size={15} />
+          <Plus size={17} />
         </button>
       )}
     </div>
@@ -179,7 +178,7 @@ export default function SprintSection({
     <div>
       {/* ── Section header ── */}
       <div
-        className="group/header flex items-center gap-3 px-4 h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
+        className="group/header flex items-center gap-3 board-px h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
         onClick={() => setCollapsed((c) => !c)}
       >
         <ChevronRight
