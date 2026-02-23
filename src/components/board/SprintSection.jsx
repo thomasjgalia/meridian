@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRight, Pencil, Plus } from 'lucide-react'
+import { ChevronRight, Pencil, Plus, CalendarDays } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
 import { StatusDot } from '../ui/StatusChip'
 import Avatar from '../ui/Avatar'
@@ -23,11 +23,16 @@ const STATE_BADGE = {
 
 const STATE_CYCLE = { planning: 'active', active: 'complete', complete: 'planning' }
 
-const INDENT = 20
+const INDENT = 14
 
 function formatDate(str) {
   if (!str) return ''
   return new Date(str).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+function formatDue(dateStr) {
+  if (!dateStr) return null
+  return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 /**
@@ -68,6 +73,7 @@ function SprintItemRow({
   onToggle,
   onStatusCycle,
   onAddChild,
+  onUpdate,
   statusMap,
   userMap,
 }) {
@@ -75,15 +81,19 @@ function SprintItemRow({
   const status = statusMap[row.statusId]
   const user   = userMap[row.assigneeId]
 
+  const [editingDue, setEditingDue] = useState(false)
+
+  const rowBg = isSelected
+    ? '#f0fdfa'
+    : status?.isBlocked || status?.isComplete
+      ? status.color + '14'
+      : undefined
+
   return (
     <div
       onClick={() => onSelect(row.id)}
-      className={`
-        group flex items-center gap-2.5 sm:gap-2 row-height border-b border-gray-100 cursor-pointer
-        hover:bg-gray-50 transition-colors text-base sm:text-sm
-        ${isSelected ? 'bg-meridian-50' : 'bg-white'}
-      `}
-      style={{ paddingLeft: `calc(var(--board-px) + ${row.depth * INDENT}px)`, paddingRight: 'var(--board-px)' }}
+      className="group flex items-center gap-2.5 sm:gap-2 row-height border-b border-gray-100 cursor-pointer hover:brightness-95 transition-all text-base sm:text-sm"
+      style={{ paddingLeft: `calc(var(--board-px) + ${row.depth * INDENT}px)`, paddingRight: 'var(--board-px)', backgroundColor: rowBg }}
     >
       {/* Expand / collapse toggle */}
       <button
@@ -103,14 +113,48 @@ function SprintItemRow({
 
       {Icon && <Icon className={`shrink-0 w-6 h-6 sm:w-5 sm:h-5 ${TYPE_COLOR[row.type]}`} />}
 
-      <span className={`flex-1 truncate min-w-0 ${status?.isComplete ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-        {row.title}
-      </span>
+      {/* Title + parent context */}
+      <div className="flex items-baseline gap-2 flex-1 min-w-0">
+        <span className="truncate text-gray-800">{row.title}</span>
+        {parentName && (
+          <span className="hidden md:block shrink-0 text-2xs text-gray-400 truncate max-w-[160px]">
+            {parentName}
+          </span>
+        )}
+      </div>
 
-      {parentName && (
-        <span className="hidden md:block shrink-0 text-2xs text-gray-400 truncate max-w-[160px]">
-          {parentName}
-        </span>
+      {/* Due date — inline editable */}
+      {(row.dueDate || onUpdate) && (
+        <div className="hidden sm:flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+          {editingDue ? (
+            <input
+              type="date"
+              autoFocus
+              defaultValue={row.dueDate ? row.dueDate.slice(0, 10) : ''}
+              onChange={(e) => { onUpdate(row.id, 'dueDate', e.target.value || null); setEditingDue(false) }}
+              onBlur={() => setEditingDue(false)}
+              className="h-6 text-2xs px-1.5 border border-meridian-300 rounded focus:outline-none focus:ring-1 focus:ring-meridian-400 bg-white"
+            />
+          ) : row.dueDate ? (
+            <span
+              onClick={onUpdate ? () => setEditingDue(true) : undefined}
+              className={`inline-flex items-center text-2xs font-medium px-1.5 py-0.5 rounded ${onUpdate ? 'cursor-pointer' : ''} ${
+                new Date(row.dueDate) < new Date() ? 'bg-red-50 text-red-500 ring-1 ring-red-200' : 'bg-gray-100 text-gray-400'
+              }`}
+            >
+              {formatDue(row.dueDate)}
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setEditingDue(true)}
+              className="p-0.5 rounded text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Set due date"
+            >
+              <CalendarDays size={13} />
+            </button>
+          )}
+        </div>
       )}
 
       <Avatar user={user} size={24} className="shrink-0 sm:w-5 sm:h-5" />
@@ -142,6 +186,7 @@ export default function SprintSection({
   onSelect,
   onStatusCycle,
   onUpdate,
+  onItemUpdate,
   onDelete,
   onAddChild,
   statusMap,
@@ -245,6 +290,7 @@ export default function SprintSection({
                 onToggle={handleToggle}
                 onStatusCycle={onStatusCycle}
                 onAddChild={onAddChild}
+                onUpdate={onItemUpdate}
                 statusMap={statusMap}
                 userMap={userMap}
               />

@@ -906,6 +906,7 @@ export default function Board() {
               onSelect={handleSelect}
               onStatusCycle={handleStatusCycle}
               onUpdate={userCanWrite ? handleUpdateSprint : undefined}
+              onItemUpdate={userCanWrite ? handleUpdateItem : undefined}
               onDelete={userCanWrite ? handleDeleteSprint : undefined}
               onAddChild={userCanWrite ? handleAddChild : undefined}
               statusMap={statusMap}
@@ -960,6 +961,7 @@ export default function Board() {
                           onToggle={handleToggle}
                           onSelect={handleSelect}
                           onStatusCycle={handleStatusCycle}
+                          onUpdate={userCanWrite ? handleUpdateItem : undefined}
                           onAddChild={userCanWrite ? handleAddChild : undefined}
                           statusMap={statusMap}
                           userMap={userMap}
