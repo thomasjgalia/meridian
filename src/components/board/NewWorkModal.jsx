@@ -39,12 +39,12 @@ function SelectField({ label, value, onChange, options, placeholder, disabled })
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
-export default function NewWorkModal({ items, statuses, onAdd, onClose }) {
-  const [type,    setType]    = useState('episode')
-  const [title,   setTitle]   = useState('')
-  const [arcId,   setArcId]   = useState(null)
-  const [episodeId,  setEpisodeId]  = useState(null)
-  const [signalId,   setSignalId]   = useState(null)
+export default function NewWorkModal({ items, statuses, initialContext, onAdd, onClose }) {
+  const [type,       setType]      = useState(initialContext?.type      ?? 'episode')
+  const [title,      setTitle]     = useState('')
+  const [arcId,      setArcId]     = useState(initialContext?.arcId     ?? null)
+  const [episodeId,  setEpisodeId] = useState(initialContext?.episodeId ?? null)
+  const [signalId,   setSignalId]  = useState(initialContext?.signalId  ?? null)
 
   // Cascading option lists derived from items
   const arcs     = useMemo(() => items.filter((i) => i.type === 'arc'),     [items])

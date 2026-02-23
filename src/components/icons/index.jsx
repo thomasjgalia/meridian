@@ -83,8 +83,19 @@ export const IconEpisode = ({ size = 18, className = '' }) => (
     strokeLinejoin="round"
     className={className}
   >
-    <circle cx="32" cy="32" r="24" strokeWidth="2.5"/>
-    <path d="M 32 32 L 32 8 A 24 24 0 0 1 56 32 Z" fill="currentColor" stroke="none"/>
+    {/* Dish ellipse */}
+    <ellipse cx="32" cy="36" rx="18" ry="6" transform="rotate(-40 32 36)" strokeWidth="2.5"/>
+    {/* Convex back curve */}
+    <path d="M 18 48 Q 32 56 46 24" strokeWidth="2"/>
+    {/* Center hub dot */}
+    <circle cx="32" cy="36" r="2.5" fill="currentColor" strokeWidth="1.5"/>
+    {/* Stand */}
+    <line x1="32" y1="52" x2="32" y2="62" strokeWidth="2.5"/>
+    {/* Base */}
+    <line x1="22" y1="62" x2="42" y2="62" strokeWidth="2.5"/>
+    {/* Concentric wave arcs */}
+    <path d="M 26 28 A 8 8 0 0 1 40 30" strokeWidth="1.5" opacity="0.7" transform="rotate(-45 32 36)"/>
+    <path d="M 20 22 A 14 14 0 0 1 46 25" strokeWidth="1.5" opacity="0.4" transform="rotate(-45 32 36)"/>
   </svg>
 )
 

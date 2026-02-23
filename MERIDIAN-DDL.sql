@@ -87,7 +87,7 @@ CREATE TABLE statuses (
 -- ============================================================
 CREATE TABLE sprints (
     id              INT IDENTITY(1,1) PRIMARY KEY,
-    meridian_id     INT NOT NULL REFERENCES meridians(id),
+    meridian_id     INT NOT NULL REFERENCES meridians(id),  -- scoped to a meridian
     name            NVARCHAR(200) NOT NULL,
     goal            NVARCHAR(1000) NULL,
     state           VARCHAR(20) NOT NULL DEFAULT 'planning'
@@ -115,6 +115,8 @@ CREATE TABLE work_items (
     status_id       INT NULL REFERENCES statuses(id),
     assignee_id     INT NULL REFERENCES users(id),
     sprint_id       INT NULL REFERENCES sprints(id),
+    start_date      DATE NULL,
+    due_date        DATE NULL,
     position        INT NOT NULL DEFAULT 0,                 -- ordering within parent
     created_by      INT NOT NULL REFERENCES users(id),
     created_at      DATETIME2 DEFAULT GETUTCDATE(),
@@ -185,6 +187,7 @@ CREATE INDEX ix_sprints_meridian_state     ON sprints (meridian_id, state);
 -- ============================================================
 
 -- Example seed procedure
+GO
 CREATE PROCEDURE sp_seed_default_statuses
     @meridian_id INT
 AS

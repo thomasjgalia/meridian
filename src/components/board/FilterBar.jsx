@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, X } from 'lucide-react'
+import { ChevronDown, X, Check } from 'lucide-react'
 
 // Generic multi-select pill dropdown
 function FilterPill({ label, options, selected, onChange }) {
@@ -73,9 +73,58 @@ function FilterPill({ label, options, selected, onChange }) {
   )
 }
 
-export default function FilterBar({ meridians, arcs, episodes, statuses, users, sprints, filters, onChange }) {
+// Single-select meridian switcher — lives in the filter bar
+function MeridianSwitcher({ meridians, activeMeridianId, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const active = meridians.find((m) => m.id === activeMeridianId)
+
+  useEffect(() => {
+    function handler(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs font-medium border transition-colors bg-white border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800"
+      >
+        {active && (
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: active.color }} />
+        )}
+        <span>{active ? active.name : 'Meridian'}</span>
+        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute top-full mt-1 left-0 z-20 min-w-[180px] bg-white border border-gray-200 rounded-lg shadow-lg py-1">
+          {meridians.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => { onChange(m.id); setOpen(false) }}
+              className="flex items-center gap-2.5 w-full px-3 py-1.5 text-xs hover:bg-gray-50 text-gray-700"
+            >
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
+              <span className={`flex-1 text-left ${m.id === activeMeridianId ? 'font-semibold text-gray-900' : ''}`}>
+                {m.name}
+              </span>
+              {m.id === activeMeridianId && <Check size={11} className="text-meridian-600 shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function FilterBar({ meridians, activeMeridianId, onMeridianChange, arcs, episodes, statuses, users, sprints, filters, onChange }) {
   const hasAny =
-    filters.meridianIds.length > 0 ||
     filters.arcIds.length      > 0 ||
     filters.episodeIds.length  > 0 ||
     filters.assigneeIds.length > 0 ||
@@ -83,21 +132,23 @@ export default function FilterBar({ meridians, arcs, episodes, statuses, users, 
     filters.sprintId !== null
 
   function clear() {
-    onChange({ meridianIds: [], arcIds: [], episodeIds: [], assigneeIds: [], statusIds: [], sprintId: null })
+    onChange({ ...filters, arcIds: [], episodeIds: [], assigneeIds: [], statusIds: [], sprintId: null })
   }
 
   return (
     <div className="flex items-center gap-2 px-4 h-9 border-b border-gray-200 bg-white shrink-0">
+      <MeridianSwitcher
+        meridians={meridians}
+        activeMeridianId={activeMeridianId}
+        onChange={onMeridianChange}
+      />
+
+      <div className="w-px h-4 bg-gray-200 mx-1" />
+
       <span className="text-2xs font-medium text-gray-400 uppercase tracking-wider mr-1">
         Filter
       </span>
 
-      <FilterPill
-        label="Meridian"
-        options={meridians}
-        selected={filters.meridianIds}
-        onChange={(v) => onChange({ ...filters, meridianIds: v, arcIds: [], episodeIds: [] })}
-      />
       <FilterPill
         label="Arc"
         options={arcs}

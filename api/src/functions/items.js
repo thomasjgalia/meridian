@@ -2,23 +2,10 @@ const { app }         = require('@azure/functions')
 const { requireAuth } = require('../shared/auth')
 const { resolveUser } = require('../shared/user')
 const { query, sql }  = require('../shared/db')
+const { getMemberRole, canWrite } = require('../shared/roles')
 
 const VALID_TYPES  = ['arc', 'episode', 'signal', 'relay']
-const VALID_FIELDS = ['title', 'description', 'statusId', 'assigneeId', 'sprintId', 'parentId', 'meridianId']
-
-// ── Access guard ───────────────────────────────────────────────────────────────
-
-/** Returns true if the user is a member of the given meridian. */
-async function isMember(userId, meridianId) {
-  const r = await query(
-    `SELECT 1 FROM meridian_members WHERE user_id = @userId AND meridian_id = @meridianId`,
-    [
-      { name: 'userId',     type: sql.Int, value: userId     },
-      { name: 'meridianId', type: sql.Int, value: meridianId },
-    ]
-  )
-  return r.recordset.length > 0
-}
+const VALID_FIELDS = ['title', 'description', 'statusId', 'assigneeId', 'sprintId', 'parentId', 'meridianId', 'startDate', 'dueDate']
 
 // ── POST /api/items ────────────────────────────────────────────────────────────
 
@@ -44,8 +31,9 @@ app.http('itemsCreate', {
     try {
       const userId = await resolveUser(caller)
 
-      if (!await isMember(userId, meridianId)) {
-        return { status: 403, jsonBody: { error: 'Forbidden' } }
+      const role = await getMemberRole(userId, meridianId)
+      if (!canWrite(role)) {
+        return { status: 403, jsonBody: { error: role === null ? 'Forbidden' : 'Viewers cannot create items' } }
       }
 
       // Position = count of existing siblings
@@ -66,7 +54,8 @@ app.http('itemsCreate', {
          OUTPUT
            INSERTED.id, INSERTED.meridian_id, INSERTED.parent_id, INSERTED.type,
            INSERTED.title, INSERTED.description, INSERTED.status_id,
-           INSERTED.assignee_id, INSERTED.sprint_id, INSERTED.position
+           INSERTED.assignee_id, INSERTED.sprint_id,
+           INSERTED.start_date, INSERTED.due_date, INSERTED.position
          VALUES
            (@meridianId, @parentId, @type, @title, @statusId, @userId, @position)`,
         [
@@ -93,6 +82,8 @@ app.http('itemsCreate', {
           statusId:    row.status_id,
           assigneeId:  row.assignee_id,
           sprintId:    row.sprint_id,
+          startDate:   row.start_date,
+          dueDate:     row.due_date,
           position:    row.position,
         },
       }
@@ -140,8 +131,9 @@ app.http('itemsUpdate', {
       }
 
       const item = itemResult.recordset[0]
-      if (!await isMember(userId, item.meridian_id)) {
-        return { status: 403, jsonBody: { error: 'Forbidden' } }
+      const role = await getMemberRole(userId, item.meridian_id)
+      if (!canWrite(role)) {
+        return { status: 403, jsonBody: { error: role === null ? 'Forbidden' : 'Viewers cannot edit items' } }
       }
 
       // ── parentId change: cascade meridianId up then down ───────────────────
@@ -197,8 +189,9 @@ app.http('itemsUpdate', {
 
       // ── meridianId change: cascade DOWN to all descendants ─────────────────
       if (field === 'meridianId') {
-        if (!await isMember(userId, value)) {
-          return { status: 403, jsonBody: { error: 'No access to target meridian' } }
+        const targetRole = await getMemberRole(userId, value)
+        if (!canWrite(targetRole)) {
+          return { status: 403, jsonBody: { error: 'No write access to target meridian' } }
         }
 
         await query(
@@ -228,6 +221,8 @@ app.http('itemsUpdate', {
         statusId:    'status_id',
         assigneeId:  'assignee_id',
         sprintId:    'sprint_id',
+        startDate:   'start_date',
+        dueDate:     'due_date',
       }
       const TYPE = {
         title:       sql.NVarChar,
@@ -235,11 +230,35 @@ app.http('itemsUpdate', {
         statusId:    sql.Int,
         assigneeId:  sql.Int,
         sprintId:    sql.Int,
+        startDate:   sql.Date,
+        dueDate:     sql.Date,
+      }
+
+      // Auto-set start_date when transitioning to an active (non-default, non-complete) status
+      // and start_date hasn't been set yet.
+      let autoStartDate = ''
+      if (field === 'statusId' && value) {
+        const check = await query(
+          `SELECT 1
+           FROM   statuses s
+           JOIN   work_items wi ON wi.id = @itemId
+           WHERE  s.id = @statusId
+             AND  s.is_default  = 0
+             AND  s.is_complete = 0
+             AND  wi.start_date IS NULL`,
+          [
+            { name: 'itemId',   type: sql.Int, value: itemId },
+            { name: 'statusId', type: sql.Int, value         },
+          ]
+        )
+        if (check.recordset.length > 0) {
+          autoStartDate = ', start_date = CAST(GETUTCDATE() AS DATE)'
+        }
       }
 
       await query(
         `UPDATE work_items
-         SET ${COLUMN[field]} = @value, updated_at = GETUTCDATE()
+         SET ${COLUMN[field]} = @value, updated_at = GETUTCDATE()${autoStartDate}
          WHERE id = @itemId`,
         [
           { name: 'value',  type: TYPE[field], value: value  },
@@ -297,8 +316,9 @@ app.http('itemsDelete', {
       }
 
       const meridianId = itemResult.recordset[0].meridian_id
-      if (!await isMember(userId, meridianId)) {
-        return { status: 403, jsonBody: { error: 'Forbidden' } }
+      const role = await getMemberRole(userId, meridianId)
+      if (!canWrite(role)) {
+        return { status: 403, jsonBody: { error: role === null ? 'Forbidden' : 'Viewers cannot delete items' } }
       }
 
       // Soft-delete the item and all descendants in one recursive CTE

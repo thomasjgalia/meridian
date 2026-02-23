@@ -6,7 +6,16 @@ const { query, sql }  = require('../shared/db')
 // ── Row → camelCase mappers ────────────────────────────────────────────────────
 
 function mapMeridian(r) {
-  return { id: r.id, name: r.name, slug: r.slug, color: r.color }
+  return {
+    id:          r.id,
+    name:        r.name,
+    slug:        r.slug,
+    color:       r.color,
+    description: r.description,
+    isActive:    !!r.is_active,
+    startDate:   r.start_date,
+    endDate:     r.end_date,
+  }
 }
 
 function mapStatus(r) {
@@ -25,12 +34,12 @@ function mapStatus(r) {
 function mapSprint(r) {
   return {
     id:         r.id,
-    meridianId: r.meridian_id,
     name:       r.name,
     state:      r.state,
     goal:       r.goal,
     startDate:  r.start_date,
     endDate:    r.end_date,
+    meridianId: r.meridian_id,
   }
 }
 
@@ -54,6 +63,8 @@ function mapItem(r) {
     statusId:    r.status_id,
     assigneeId:  r.assignee_id,
     sprintId:    r.sprint_id,
+    startDate:   r.start_date,
+    dueDate:     r.due_date,
     position:    r.position,
   }
 }
@@ -83,10 +94,11 @@ app.http('board', {
       // All five queries JOIN through meridian_members so data is automatically
       // scoped to what this user can see. No IN clauses, no temp tables.
 
-      const [meridians, statuses, sprints, users, items] = await Promise.all([
+      const [meridians, statuses, sprints, users, items, myMemberships] = await Promise.all([
 
         query(
-          `SELECT m.id, m.name, m.slug, m.color
+          `SELECT m.id, m.name, m.slug, m.color, m.description,
+                  m.is_active, m.start_date, m.end_date
            FROM   meridians m
            JOIN   meridian_members mm ON mm.meridian_id = m.id
            WHERE  mm.user_id = @userId AND m.is_active = 1
@@ -104,14 +116,14 @@ app.http('board', {
           [{ name: 'userId', type: sql.Int, value: userId }]
         ),
 
+        // Sprints scoped to meridians the user is a member of
         query(
-          `SELECT sp.id, sp.meridian_id, sp.name, sp.state, sp.goal,
-                  sp.start_date, sp.end_date
-           FROM   sprints sp
-           JOIN   meridian_members mm ON mm.meridian_id = sp.meridian_id
+          `SELECT s.id, s.name, s.state, s.goal, s.start_date, s.end_date, s.meridian_id
+           FROM   sprints s
+           JOIN   meridian_members mm ON mm.meridian_id = s.meridian_id
            WHERE  mm.user_id = @userId
-           ORDER  BY CASE sp.state WHEN 'active' THEN 0 WHEN 'planning' THEN 1 ELSE 2 END,
-                     sp.start_date`,
+           ORDER  BY CASE s.state WHEN 'active' THEN 0 WHEN 'planning' THEN 1 ELSE 2 END,
+                     s.start_date`,
           [{ name: 'userId', type: sql.Int, value: userId }]
         ),
 
@@ -127,7 +139,8 @@ app.http('board', {
 
         query(
           `SELECT wi.id, wi.meridian_id, wi.parent_id, wi.type, wi.title,
-                  wi.description, wi.status_id, wi.assignee_id, wi.sprint_id, wi.position
+                  wi.description, wi.status_id, wi.assignee_id, wi.sprint_id,
+                  wi.start_date, wi.due_date, wi.position
            FROM   work_items wi
            JOIN   meridian_members mm ON mm.meridian_id = wi.meridian_id
            WHERE  mm.user_id = @userId AND wi.is_active = 1
@@ -135,11 +148,23 @@ app.http('board', {
           [{ name: 'userId', type: sql.Int, value: userId }]
         ),
 
+        // Caller's role per meridian
+        query(
+          `SELECT meridian_id, role FROM meridian_members WHERE user_id = @userId`,
+          [{ name: 'userId', type: sql.Int, value: userId }]
+        ),
+
       ])
+
+      // Build a meridianId → role map for the caller
+      const myRoles = {}
+      myMemberships.recordset.forEach((r) => { myRoles[r.meridian_id] = r.role })
 
       return {
         status:   200,
         jsonBody: {
+          myUserId:  userId,
+          myRoles,
           meridians: meridians.recordset.map(mapMeridian),
           statuses:  statuses.recordset.map(mapStatus),
           sprints:   sprints.recordset.map(mapSprint),

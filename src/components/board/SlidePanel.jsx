@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, ChevronDown, Trash2, AlertTriangle } from 'lucide-react'
+import { X, ChevronDown, Trash2, AlertTriangle, Check } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
 import Avatar from '../ui/Avatar'
 
@@ -131,6 +131,116 @@ function EditSelect({ value, onChange, options, nullLabel, renderSelected }) {
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
+// ── Editable title ────────────────────────────────────────────────────────────
+
+function EditableTitle({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [draft,   setDraft]   = useState(value)
+  const inputRef = useRef(null)
+
+  useEffect(() => { setDraft(value); setEditing(false) }, [value])
+  useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
+
+  function commit() {
+    const trimmed = draft.trim()
+    if (trimmed && trimmed !== value) onSave(trimmed)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1 flex-1">
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
+          className="flex-1 text-gray-900 font-medium leading-snug bg-transparent border-b border-meridian-400 outline-none text-sm py-0.5"
+        />
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); commit() }} className="p-0.5 text-teal-600 hover:text-teal-800">
+          <Check size={14} />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="flex-1 text-left text-gray-900 font-medium leading-snug hover:text-meridian-700 transition-colors"
+      title="Click to edit title"
+    >
+      {value}
+    </button>
+  )
+}
+
+// ── Editable description ──────────────────────────────────────────────────────
+
+function EditableDescription({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [draft,   setDraft]   = useState(value ?? '')
+  const textareaRef = useRef(null)
+
+  useEffect(() => { setDraft(value ?? ''); setEditing(false) }, [value])
+  useEffect(() => { if (editing) { textareaRef.current?.focus(); textareaRef.current?.select() } }, [editing])
+
+  function commit() {
+    const trimmed = draft.trim()
+    onSave(trimmed || null)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className="flex flex-col gap-2">
+        <textarea
+          ref={textareaRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={5}
+          placeholder="Add a description…"
+          className="w-full text-sm text-gray-700 leading-relaxed bg-gray-50 border border-gray-200 rounded-md px-2.5 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-meridian-400"
+        />
+        <div className="flex gap-2 justify-end">
+          <button
+            type="button"
+            onClick={() => { setDraft(value ?? ''); setEditing(false) }}
+            className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded border border-gray-200 hover:border-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={commit}
+            className="text-xs font-medium text-white bg-meridian-600 hover:bg-meridian-700 px-2.5 py-1 rounded"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="w-full text-left"
+      title="Click to edit description"
+    >
+      {value
+        ? <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap hover:text-gray-900 transition-colors">{value}</p>
+        : <p className="text-sm text-gray-400 italic hover:text-gray-500 transition-colors">Click to add a description…</p>
+      }
+    </button>
+  )
+}
+
+// ── Main panel ────────────────────────────────────────────────────────────────
+
 export default function SlidePanel({
   item,
   onClose,
@@ -190,7 +300,7 @@ export default function SlidePanel({
           {/* Title */}
           <div className="flex items-start gap-2">
             {Icon && <Icon size={17} className={`mt-0.5 shrink-0 ${{arc:'text-violet-500',episode:'text-indigo-600',signal:'text-teal-500',relay:'text-orange-500'}[item.type] ?? 'text-gray-400'}`} />}
-            <h2 className="text-gray-900 font-medium leading-snug">{item.title}</h2>
+            <EditableTitle value={item.title} onSave={(v) => update('title', v)} />
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
@@ -320,15 +430,34 @@ export default function SlidePanel({
             </div>
           )}
 
+          {/* Start Date */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-2xs text-gray-400 uppercase tracking-wider">Start Date</span>
+            <input
+              type="date"
+              value={item.startDate ? item.startDate.slice(0, 10) : ''}
+              onChange={(e) => update('startDate', e.target.value || null)}
+              className="h-7 px-2 rounded-md border border-gray-200 text-sm text-gray-700 bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-meridian-400 focus:border-transparent"
+            />
+          </div>
+
+          {/* Due Date */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-2xs text-gray-400 uppercase tracking-wider">Due Date</span>
+            <input
+              type="date"
+              value={item.dueDate ? item.dueDate.slice(0, 10) : ''}
+              onChange={(e) => update('dueDate', e.target.value || null)}
+              className="h-7 px-2 rounded-md border border-gray-200 text-sm text-gray-700 bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-meridian-400 focus:border-transparent"
+            />
+          </div>
+
         </div>
       </Section>
 
       {/* Description */}
       <Section title="Description">
-        {item.description
-          ? <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{item.description}</p>
-          : <p className="text-sm text-gray-400 italic">No description.</p>
-        }
+        <EditableDescription value={item.description} onSave={(v) => update('description', v)} />
       </Section>
 
       {/* Child items */}

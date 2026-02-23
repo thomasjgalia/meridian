@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { ChevronRight, MoreHorizontal } from 'lucide-react'
+import { ChevronRight, Pencil } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
 import StatusChip from '../ui/StatusChip'
 import Avatar from '../ui/Avatar'
+import SprintEditModal from './SprintEditModal'
 
 const TYPE_COLOR = {
   arc:     'text-violet-500',
@@ -17,7 +18,9 @@ const STATE_BADGE = {
   complete: 'bg-gray-100 text-gray-500',
 }
 
-const INDENT     = 20
+const STATE_CYCLE = { planning: 'active', active: 'complete', complete: 'planning' }
+
+const INDENT      = 20
 const BASE_INDENT = 12
 
 function formatDate(str) {
@@ -28,7 +31,6 @@ function formatDate(str) {
 /**
  * Build a flat ordered row list from sprint items.
  * Items whose parent is also in the sprint become children.
- * collapsedIds: Set of item IDs that are collapsed (default = none → all expanded).
  */
 function buildSprintTree(sprintItems, collapsedIds) {
   const ids = new Set(sprintItems.map((i) => i.id))
@@ -102,7 +104,6 @@ function SprintItemRow({
         {row.title}
       </span>
 
-      {/* Parent context */}
       {parentName && (
         <span className="hidden md:block shrink-0 text-2xs text-gray-400 truncate max-w-[160px]">
           {parentName}
@@ -114,14 +115,6 @@ function SprintItemRow({
       <div onClick={(e) => e.stopPropagation()} className="shrink-0">
         <StatusChip status={status} onClick={() => onStatusCycle(row.id)} />
       </div>
-
-      <button
-        type="button"
-        onClick={(e) => e.stopPropagation()}
-        className="shrink-0 p-0.5 rounded text-gray-300 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <MoreHorizontal size={14} />
-      </button>
     </div>
   )
 }
@@ -132,14 +125,16 @@ export default function SprintSection({
   selectedId,
   onSelect,
   onStatusCycle,
+  onUpdate,
+  onDelete,
   statusMap,
   userMap,
   allItemMap,
   defaultCollapsed = false,
 }) {
   const [collapsed,    setCollapsed]    = useState(defaultCollapsed)
-  // Tracks items collapsed within the sprint tree; default = all expanded
   const [collapsedIds, setCollapsedIds] = useState(new Set())
+  const [editOpen,     setEditOpen]     = useState(false)
 
   const handleToggle = (id) => {
     setCollapsedIds((prev) => {
@@ -149,10 +144,16 @@ export default function SprintSection({
     })
   }
 
+  const handleCycleState = (e) => {
+    e.stopPropagation()
+    const next = STATE_CYCLE[sprint.state]
+    onUpdate?.(sprint.id, 'state', next)
+  }
+
   const rows           = buildSprintTree(items, collapsedIds)
   const completedCount = items.filter((i) => statusMap[i.statusId]?.isComplete).length
-  const progress      = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0
-  const dateStr       = sprint.startDate && sprint.endDate
+  const progress       = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0
+  const dateStr        = sprint.startDate && sprint.endDate
     ? `${formatDate(sprint.startDate)} – ${formatDate(sprint.endDate)}`
     : null
 
@@ -160,7 +161,7 @@ export default function SprintSection({
     <div>
       {/* ── Section header ── */}
       <div
-        className="flex items-center gap-3 px-4 h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
+        className="group/header flex items-center gap-3 px-4 h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
         onClick={() => setCollapsed((c) => !c)}
       >
         <ChevronRight
@@ -169,9 +170,15 @@ export default function SprintSection({
         />
         <span className="font-semibold text-sm text-gray-800">{sprint.name}</span>
 
-        <span className={`text-2xs font-medium px-1.5 py-0.5 rounded-full ${STATE_BADGE[sprint.state]}`}>
+        {/* State badge — click cycles state */}
+        <button
+          type="button"
+          onClick={handleCycleState}
+          title="Click to change state"
+          className={`text-2xs font-medium px-1.5 py-0.5 rounded-full transition-opacity hover:opacity-70 ${STATE_BADGE[sprint.state]}`}
+        >
           {sprint.state.charAt(0).toUpperCase() + sprint.state.slice(1)}
-        </span>
+        </button>
 
         {dateStr && (
           <span className="text-xs text-gray-400 hidden sm:block">{dateStr}</span>
@@ -193,6 +200,18 @@ export default function SprintSection({
           </div>
           <span className="text-xs text-gray-400 w-7 text-right">{progress}%</span>
         </div>
+
+        {/* Edit button */}
+        {onUpdate && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setEditOpen(true) }}
+            title="Edit sprint"
+            className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-200 transition-colors opacity-0 group-hover/header:opacity-100"
+          >
+            <Pencil size={13} />
+          </button>
+        )}
       </div>
 
       {/* ── Sprint items ── */}
@@ -214,9 +233,19 @@ export default function SprintSection({
             ))
           : (
             <div className="px-12 py-3 text-sm text-gray-400 italic bg-white border-b border-gray-100">
-              No items match the current filters.
+              No items assigned to this sprint yet.
             </div>
           )
+      )}
+
+      {/* Sprint edit modal */}
+      {editOpen && (
+        <SprintEditModal
+          sprint={sprint}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onClose={() => setEditOpen(false)}
+        />
       )}
     </div>
   )

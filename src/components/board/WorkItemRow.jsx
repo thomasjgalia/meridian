@@ -1,4 +1,4 @@
-import { ChevronRight, MoreHorizontal } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
 import StatusChip from '../ui/StatusChip'
 import Avatar from '../ui/Avatar'
@@ -15,6 +15,9 @@ const TYPE_COLOR = {
   relay:   'text-orange-500',
 }
 
+// Types that can have children added inline
+const CAN_ADD_CHILD = { arc: true, episode: true, signal: true }
+
 export default function WorkItemRow({
   item,
   depth,
@@ -24,6 +27,7 @@ export default function WorkItemRow({
   onToggle,
   onSelect,
   onStatusCycle,
+  onAddChild,
   statusMap,
   userMap,
   sprintMap,
@@ -102,14 +106,17 @@ export default function WorkItemRow({
         />
       </div>
 
-      {/* Actions */}
-      <button
-        type="button"
-        onClick={(e) => e.stopPropagation()}
-        className="shrink-0 p-0.5 rounded text-gray-300 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        <MoreHorizontal size={15} />
-      </button>
+      {/* Add child button — visible on hover for non-relay items */}
+      {CAN_ADD_CHILD[item.type] && onAddChild && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onAddChild(item) }}
+          title={`Add ${item.type === 'arc' ? 'Episode' : item.type === 'episode' ? 'Signal' : 'Relay'}`}
+          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-40 group-hover:opacity-100 transition-all"
+        >
+          <Plus size={15} />
+        </button>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Plus, ChevronRight } from 'lucide-react'
+import { Plus, ChevronRight, Settings } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { api } from '../../api/client'
 import { IconSextant, IconArc, IconEpisode, IconSignal, IconRelay } from '../icons'
@@ -11,6 +11,9 @@ import SlidePanel from './SlidePanel'
 import NewWorkModal from './NewWorkModal'
 import NewMeridianModal from './NewMeridianModal'
 import NewArcModal from './NewArcModal'
+import NewSprintModal from './NewSprintModal'
+import MeridianSettingsModal from './MeridianSettingsModal'
+import InviteAcceptBanner from './InviteAcceptBanner'
 
 // ── Lookup maps ───────────────────────────────────────────────────────────────
 
@@ -106,6 +109,9 @@ function buildBacklogRows(items, itemMap, expandedIds, filters) {
 
 const INITIAL_FILTERS = { meridianIds: [], arcIds: [], episodeIds: [], assigneeIds: [], statusIds: [], sprintId: null }
 
+// Child type produced when clicking "+" on a parent row
+const ADD_CHILD_TYPE = { arc: 'episode', episode: 'signal', signal: 'relay' }
+
 export default function Board() {
   const { user, logout } = useAuth()
 
@@ -115,6 +121,8 @@ export default function Board() {
   const [statuses,  setStatuses]  = useState([])
   const [users,     setUsers]     = useState([])
   const [sprints,   setSprints]   = useState([])
+  const [myRoles,   setMyRoles]   = useState({}) // { [meridianId]: 'owner' | 'member' | 'viewer' }
+  const [myUserId,  setMyUserId]  = useState(null)
   const [loading,   setLoading]   = useState(true)
   const [error,     setError]     = useState(null)
 
@@ -123,10 +131,17 @@ export default function Board() {
   const [backlogCollapsed,  setBacklogCollapsed]  = useState(false)
   const [selectedId,        setSelectedId]        = useState(null)
   const [filters,           setFilters]           = useState(INITIAL_FILTERS)
+  const [activeMeridianId,  setActiveMeridianId]  = useState(null)
   const [newWorkOpen,       setNewWorkOpen]       = useState(false)
+  const [newWorkContext,    setNewWorkContext]     = useState(null) // { type, arcId?, episodeId?, signalId? }
   const [newMeridianOpen,   setNewMeridianOpen]   = useState(false)
+  const [newSprintOpen,     setNewSprintOpen]     = useState(false)
   const [meridianMenuOpen,  setMeridianMenuOpen]  = useState(false)
   const [newArcMeridianId,  setNewArcMeridianId]  = useState(null)
+  const [settingsMeridian,  setSettingsMeridian]  = useState(null)  // meridian object for settings modal
+  const [inviteToken,       setInviteToken]       = useState(
+    () => new URLSearchParams(window.location.search).get('invite')
+  )
 
   const meridianMenuRef = useRef(null)
 
@@ -139,8 +154,12 @@ export default function Board() {
         setSprints(data.sprints)
         setUsers(data.users)
         setItems(data.items)
+        setMyRoles(data.myRoles ?? {})
+        setMyUserId(data.myUserId ?? null)
         // Start with all episodes expanded
         setExpanded(new Set(data.items.filter((i) => i.type === 'episode').map((i) => i.id)))
+        // Default to first meridian
+        setActiveMeridianId((prev) => prev ?? data.meridians[0]?.id ?? null)
         setLoading(false)
       })
       .catch((err) => {
@@ -166,6 +185,13 @@ export default function Board() {
   const statusMap   = useMemo(() => toMap(statuses),  [statuses])
   const userMap     = useMemo(() => toMap(users),     [users])
   const sprintMap   = useMemo(() => toMap(sprints),   [sprints])
+
+  const activeMeridian = activeMeridianId ? meridianMap[activeMeridianId] ?? null : null
+
+  // Role of the current user in the active meridian
+  const activeRole    = activeMeridianId ? (myRoles[activeMeridianId] ?? null) : null
+  const userCanWrite  = activeRole === 'owner' || activeRole === 'member'
+  const userCanManage = activeRole === 'owner'
 
   const sortedSprints = useMemo(() =>
     [...sprints].sort((a, b) => {
@@ -194,15 +220,19 @@ export default function Board() {
     return map
   }, [items])
 
-  // Arc and Episode lists for the filter bar
+  // Arc and Episode lists for the filter bar — scoped to active meridian
   const filterArcs = useMemo(() =>
-    items.filter((i) => i.type === 'arc').map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
-    [items]
+    items
+      .filter((i) => i.type === 'arc' && (!activeMeridianId || i.meridianId === activeMeridianId))
+      .map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
+    [items, activeMeridianId]
   )
 
   const allFilterEpisodes = useMemo(() =>
-    items.filter((i) => i.type === 'episode').map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
-    [items]
+    items
+      .filter((i) => i.type === 'episode' && (!activeMeridianId || i.meridianId === activeMeridianId))
+      .map((i) => ({ id: i.id, name: i.title, parentId: i.parentId })),
+    [items, activeMeridianId]
   )
 
   const filterEpisodes = useMemo(() =>
@@ -212,9 +242,16 @@ export default function Board() {
     [allFilterEpisodes, filters.arcIds]
   )
 
-  // ── Sprint groups ──────────────────────────────────────────────────────────
+  // Statuses scoped to active meridian for the filter bar
+  const filterStatuses = useMemo(() =>
+    statuses.filter((s) => !activeMeridianId || s.meridianId === activeMeridianId),
+    [statuses, activeMeridianId]
+  )
+
+  // ── Sprint groups — scoped to active meridian ──────────────────────────────
   const sprintGroups = useMemo(() =>
     sortedSprints
+      .filter((s) => !activeMeridianId || s.meridianId === activeMeridianId)
       .map((sprint) => ({
         sprint,
         items: items
@@ -222,15 +259,17 @@ export default function Board() {
           .sort((a, b) => a.position - b.position),
       }))
       .filter((g) => filters.sprintId === null || filters.sprintId === g.sprint.id),
-    [items, filters, itemMap, sortedSprints]
+    [items, filters, itemMap, sortedSprints, activeMeridianId]
   )
 
-  // ── Backlog rows ───────────────────────────────────────────────────────────
+  // ── Backlog rows — scoped to active meridian ────────────────────────────────
   const backlogRows = useMemo(() => {
     if (filters.sprintId !== null) return []
-    const backlogItems = items.filter((i) => i.sprintId === null && i.type !== 'arc')
+    const backlogItems = items.filter((i) =>
+      i.sprintId === null && (!activeMeridianId || i.meridianId === activeMeridianId)
+    )
     return buildBacklogRows(backlogItems, itemMap, expanded, filters)
-  }, [items, itemMap, expanded, filters])
+  }, [items, itemMap, expanded, filters, activeMeridianId])
 
   // ── Slide panel data ───────────────────────────────────────────────────────
   const selectedItem = selectedId ? itemMap[selectedId] : null
@@ -238,7 +277,7 @@ export default function Board() {
     ? items.filter((i) => i.parentId === selectedItem.id).sort((a, b) => a.position - b.position)
     : []
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  // ── Item handlers ──────────────────────────────────────────────────────────
 
   const handleToggle = useCallback((id) => {
     setExpanded((prev) => {
@@ -252,6 +291,13 @@ export default function Board() {
     setSelectedId((prev) => (prev === id ? null : id))
   }, [])
 
+  // Returns today's date string (YYYY-MM-DD) if the given status should auto-set start_date
+  function autoStartDate(item, newStatus) {
+    if (!newStatus || newStatus.isDefault || newStatus.isComplete) return null
+    if (item.startDate) return null
+    return new Date().toISOString().split('T')[0]
+  }
+
   const handleStatusCycle = useCallback((id) => {
     setItems((prev) =>
       prev.map((item) => {
@@ -260,10 +306,11 @@ export default function Board() {
           .filter((s) => s.meridianId === item.meridianId)
           .sort((a, b) => a.position - b.position)
         if (!meridianStatuses.length) return item
-        const idx       = meridianStatuses.findIndex((s) => s.id === item.statusId)
+        const idx        = meridianStatuses.findIndex((s) => s.id === item.statusId)
         const nextStatus = meridianStatuses[(idx + 1) % meridianStatuses.length]
+        const sd         = autoStartDate(item, nextStatus)
         api.patch(`/api/items/${id}`, { field: 'statusId', value: nextStatus.id }).catch(console.error)
-        return { ...item, statusId: nextStatus.id }
+        return { ...item, statusId: nextStatus.id, ...(sd ? { startDate: sd } : {}) }
       })
     )
   }, [statuses])
@@ -307,11 +354,20 @@ export default function Board() {
         })
       }
 
-      return prev.map((item) => item.id === id ? { ...item, [field]: value } : item)
+      return prev.map((item) => {
+        if (item.id !== id) return item
+        const updates = { [field]: value }
+        if (field === 'statusId') {
+          const newStatus = statuses.find((s) => s.id === value)
+          const sd = autoStartDate(item, newStatus)
+          if (sd) updates.startDate = sd
+        }
+        return { ...item, ...updates }
+      })
     })
 
     api.patch(`/api/items/${id}`, { field, value }).catch(console.error)
-  }, [])
+  }, [statuses])
 
   const handleDeleteItem = useCallback((id) => {
     setItems((prev) => {
@@ -329,23 +385,6 @@ export default function Board() {
     api.delete(`/api/items/${id}`).catch(console.error)
   }, [])
 
-  const handleAddMeridian = useCallback(async ({ name, slug, color }) => {
-    try {
-      const created = await api.post('/api/meridians', { name, slug, color })
-      // Re-fetch board so seeded statuses are included
-      const data = await api.get('/api/board')
-      setMeridians(data.meridians)
-      setStatuses(data.statuses)
-      setSprints(data.sprints)
-      setUsers(data.users)
-      setItems(data.items)
-      return created
-    } catch (err) {
-      console.error('Failed to create meridian:', err)
-      throw err
-    }
-  }, [])
-
   const handleAddItem = useCallback(async (partialItem) => {
     const tempId = -(Date.now())
     const tempItem = { ...partialItem, id: tempId }
@@ -360,6 +399,81 @@ export default function Board() {
     } catch (err) {
       console.error('Failed to create item:', err)
       setItems((prev) => prev.filter((i) => i.id !== tempId))
+    }
+  }, [])
+
+  // Open NewWorkModal pre-populated for a child item of the given parent row
+  const handleAddChild = useCallback((parentItem) => {
+    const childType = ADD_CHILD_TYPE[parentItem.type]
+    if (!childType) return
+
+    const ctx = { type: childType }
+    // Walk up the tree to set arc/episode/signal context IDs
+    let cur = parentItem
+    while (cur) {
+      if (cur.type === 'arc')     ctx.arcId     = cur.id
+      if (cur.type === 'episode') ctx.episodeId  = cur.id
+      if (cur.type === 'signal')  ctx.signalId   = cur.id
+      cur = cur.parentId ? itemMap[cur.parentId] : null
+    }
+    setNewWorkContext(ctx)
+    setNewWorkOpen(true)
+  }, [itemMap])
+
+  // ── Meridian handlers ──────────────────────────────────────────────────────
+
+  const handleAddMeridian = useCallback(async ({ name, slug, color }) => {
+    try {
+      await api.post('/api/meridians', { name, slug, color })
+      const data = await api.get('/api/board')
+      setMeridians(data.meridians)
+      setStatuses(data.statuses)
+      setSprints(data.sprints)
+      setUsers(data.users)
+      setItems(data.items)
+      setMyRoles(data.myRoles ?? {})
+      setMyUserId(data.myUserId ?? null)
+      // Auto-select the new meridian if none is active
+      setActiveMeridianId((prev) => prev ?? data.meridians[0]?.id ?? null)
+    } catch (err) {
+      console.error('Failed to create meridian:', err)
+      throw err
+    }
+  }, [])
+
+  // ── Sprint handlers ────────────────────────────────────────────────────────
+
+  const handleAddSprint = useCallback(async (body) => {
+    const created = await api.post('/api/sprints', body)
+    setSprints((prev) => [...prev, created])
+  }, [])
+
+  const handleUpdateSprint = useCallback((id, field, value) => {
+    setSprints((prev) => prev.map((s) => s.id === id ? { ...s, [field]: value } : s))
+    api.patch(`/api/sprints/${id}`, { field, value }).catch(console.error)
+  }, [])
+
+  const handleDeleteSprint = useCallback(async (id) => {
+    await api.delete(`/api/sprints/${id}`)
+    setSprints((prev) => prev.filter((s) => s.id !== id))
+    // Unassign items locally
+    setItems((prev) => prev.map((i) => i.sprintId === id ? { ...i, sprintId: null } : i))
+  }, [])
+
+  // ── Board reload helper (used after invite accept / member leave) ─────────
+  const reloadBoard = useCallback(async () => {
+    try {
+      const data = await api.get('/api/board')
+      setMeridians(data.meridians)
+      setStatuses(data.statuses)
+      setSprints(data.sprints)
+      setUsers(data.users)
+      setItems(data.items)
+      setMyRoles(data.myRoles ?? {})
+      setMyUserId(data.myUserId ?? null)
+      setActiveMeridianId((prev) => data.meridians.some((m) => m.id === prev) ? prev : (data.meridians[0]?.id ?? null))
+    } catch (err) {
+      console.error('Board reload failed:', err)
     }
   }, [])
 
@@ -402,7 +516,7 @@ export default function Board() {
             type="button"
             onClick={() => setMeridianMenuOpen((o) => !o)}
             className="flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-gray-100 transition-colors group"
-            title="Meridians"
+            title="Manage Meridians"
           >
             <IconSextant size={20} className="text-meridian-600 shrink-0" />
             <span className="text-gray-900 font-semibold text-sm tracking-tight">Meridian</span>
@@ -420,28 +534,50 @@ export default function Board() {
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: m.color }} />
                     <span className="flex-1 font-medium text-sm text-gray-800 truncate">{m.name}</span>
                     <span className="text-2xs text-gray-400 shrink-0">/{m.slug}</span>
+                    {myRoles[m.id] === 'owner' && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setSettingsMeridian(m); setMeridianMenuOpen(false) }}
+                        title="Manage members"
+                        className="p-0.5 rounded text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors shrink-0"
+                      >
+                        <Settings size={12} />
+                      </button>
+                    )}
                   </div>
 
+                  {/* Arcs under this meridian */}
                   {(arcsByMeridian[m.id] ?? []).map((arc) => (
-                    <div key={arc.id} className="flex items-center gap-1.5 pl-7 pr-3 py-1 text-xs text-gray-600 hover:bg-gray-50">
-                      <IconArc size={12} className="text-violet-500 shrink-0" />
-                      <span className="flex-1 truncate">{arc.title}</span>
+                    <button
+                      key={arc.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveMeridianId(m.id)
+                        setFilters({ ...INITIAL_FILTERS, arcIds: [arc.id] })
+                        setMeridianMenuOpen(false)
+                      }}
+                      className="flex items-center gap-2 pl-7 pr-3 py-1 w-full text-xs text-gray-600 hover:text-violet-700 hover:bg-violet-50 transition-colors group/arc"
+                    >
+                      <IconArc size={11} className="text-violet-400 shrink-0" />
+                      <span className="flex-1 truncate text-left">{arc.title}</span>
                       {episodeCountByArc[arc.id] > 0 && (
                         <span className="text-2xs text-gray-400 shrink-0">
-                          {episodeCountByArc[arc.id]} ep
+                          {episodeCountByArc[arc.id]}
                         </span>
                       )}
-                    </div>
+                    </button>
                   ))}
 
-                  <button
-                    type="button"
-                    onClick={() => { setNewArcMeridianId(m.id); setMeridianMenuOpen(false) }}
-                    className="flex items-center gap-1.5 pl-7 pr-3 py-1 w-full text-xs text-gray-400 hover:text-violet-600 hover:bg-gray-50 transition-colors"
-                  >
-                    <Plus size={11} />
-                    Add Arc
-                  </button>
+                  {(myRoles[m.id] === 'owner' || myRoles[m.id] === 'member') && (
+                    <button
+                      type="button"
+                      onClick={() => { setNewArcMeridianId(m.id); setMeridianMenuOpen(false) }}
+                      className="flex items-center gap-1.5 pl-7 pr-3 py-1 w-full text-xs text-gray-400 hover:text-violet-600 hover:bg-gray-50 transition-colors"
+                    >
+                      <Plus size={11} />
+                      Add Arc
+                    </button>
+                  )}
                 </div>
               ))}
 
@@ -472,13 +608,25 @@ export default function Board() {
 
         <div className="flex-1" />
 
-        <button
-          type="button"
-          onClick={() => setNewWorkOpen(true)}
-          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
-        >
-          <Plus size={13} /> New Work
-        </button>
+        {userCanWrite && (
+          <button
+            type="button"
+            onClick={() => setNewSprintOpen(true)}
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
+          >
+            <Plus size={13} /> New Sprint
+          </button>
+        )}
+
+        {userCanWrite && (
+          <button
+            type="button"
+            onClick={() => { setNewWorkContext(null); setNewWorkOpen(true) }}
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
+          >
+            <Plus size={13} /> New Work
+          </button>
+        )}
 
         {user && (
           <button
@@ -495,9 +643,11 @@ export default function Board() {
       {/* ── Filter bar ── */}
       <FilterBar
         meridians={meridians}
+        activeMeridianId={activeMeridianId}
+        onMeridianChange={setActiveMeridianId}
         arcs={filterArcs}
         episodes={filterEpisodes}
-        statuses={statuses}
+        statuses={filterStatuses}
         users={users}
         sprints={sprints}
         filters={filters}
@@ -519,6 +669,8 @@ export default function Board() {
               selectedId={selectedId}
               onSelect={handleSelect}
               onStatusCycle={handleStatusCycle}
+              onUpdate={userCanWrite ? handleUpdateSprint : undefined}
+              onDelete={userCanWrite ? handleDeleteSprint : undefined}
               statusMap={statusMap}
               userMap={userMap}
               allItemMap={itemMap}
@@ -557,9 +709,10 @@ export default function Board() {
                         onToggle={handleToggle}
                         onSelect={handleSelect}
                         onStatusCycle={handleStatusCycle}
+                        onAddChild={userCanWrite ? handleAddChild : undefined}
                         statusMap={statusMap}
                         userMap={userMap}
-                        sprintMap={{}}
+                        sprintMap={sprintMap}
                         itemMap={itemMap}
                       />
                     ))
@@ -602,8 +755,18 @@ export default function Board() {
         <NewWorkModal
           items={items}
           statuses={statuses}
+          initialContext={newWorkContext}
           onAdd={handleAddItem}
-          onClose={() => setNewWorkOpen(false)}
+          onClose={() => { setNewWorkOpen(false); setNewWorkContext(null) }}
+        />
+      )}
+
+      {/* ── New Sprint modal ── */}
+      {newSprintOpen && (
+        <NewSprintModal
+          meridianId={activeMeridianId}
+          onAdd={handleAddSprint}
+          onClose={() => setNewSprintOpen(false)}
         />
       )}
 
@@ -612,6 +775,44 @@ export default function Board() {
         <NewMeridianModal
           onAdd={handleAddMeridian}
           onClose={() => setNewMeridianOpen(false)}
+        />
+      )}
+
+      {/* ── Meridian settings modal ── */}
+      {settingsMeridian && (
+        <MeridianSettingsModal
+          meridian={settingsMeridian}
+          myUserId={myUserId}
+          statuses={statuses}
+          onClose={() => setSettingsMeridian(null)}
+          onSaved={(updated) => {
+            setMeridians((prev) => prev.map((m) => m.id === updated.id ? updated : m))
+            setSettingsMeridian(updated)
+          }}
+          onDeleted={(id) => {
+            setSettingsMeridian(null)
+            setMeridians((prev) => prev.filter((m) => m.id !== id))
+            setActiveMeridianId((prev) => prev === id ? (meridians.find((m) => m.id !== id)?.id ?? null) : prev)
+          }}
+          onLeft={() => { setSettingsMeridian(null); reloadBoard() }}
+          onStatusesChanged={reloadBoard}
+        />
+      )}
+
+      {/* ── Invite accept banner ── */}
+      {inviteToken && (
+        <InviteAcceptBanner
+          token={inviteToken}
+          onAccepted={({ meridianId }) => {
+            // Strip ?invite from URL without a reload
+            window.history.replaceState({}, '', window.location.pathname)
+            setInviteToken(null)
+            reloadBoard().then(() => setActiveMeridianId(meridianId))
+          }}
+          onDismiss={() => {
+            window.history.replaceState({}, '', window.location.pathname)
+            setInviteToken(null)
+          }}
         />
       )}
 
