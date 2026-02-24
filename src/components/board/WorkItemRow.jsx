@@ -20,7 +20,8 @@ const CAN_ADD_CHILD = { arc: true, episode: true, signal: true }
 
 function formatDue(dateStr) {
   if (!dateStr) return null
-  return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
 export default function WorkItemRow({
@@ -114,7 +115,7 @@ export default function WorkItemRow({
             <span
               onClick={onUpdate ? () => setEditingDue(true) : undefined}
               className={`inline-flex items-center text-2xs font-medium px-1.5 py-0.5 rounded ${onUpdate ? 'cursor-pointer' : ''} ${
-                new Date(item.dueDate) < new Date() ? 'bg-red-50 text-red-500 ring-1 ring-red-200' : 'bg-gray-100 text-gray-400'
+                item.dueDate.slice(0, 10) < new Date().toLocaleDateString('en-CA') && !status?.isComplete ? 'bg-red-50 text-red-500 ring-1 ring-red-200' : 'bg-gray-100 text-gray-400'
               }`}
             >
               {formatDue(item.dueDate)}

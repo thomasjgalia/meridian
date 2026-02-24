@@ -1,10 +1,12 @@
 /**
  * Auth helper for Azure Functions v4 + Azure Static Web Apps.
  *
- * SWA validates the Entra ID bearer token at the platform edge for routes
- * marked allowedRoles: ["authenticated"] in staticwebapp.config.json.
+ * SWA validates OAuth tokens at the platform edge for routes marked
+ * allowedRoles: ["authenticated"] in staticwebapp.config.json.
  * Validated claims are forwarded to the function in the
  * x-ms-client-principal header (Base64-encoded JSON).
+ *
+ * Supports multiple identity providers: 'google' and 'aad' (Microsoft).
  *
  * In local development (func start, no SWA emulator) the header is absent.
  * Set DEV_AUTH_BYPASS=true in local.settings.json to use a synthetic dev caller
@@ -12,15 +14,22 @@
  */
 
 const DEV_CALLER = {
-  oid:      'dev-local-00000000-0000-0000-0000-000000000000',
-  tenantId: 'dev-tenant',
-  email:    'dev@meridian.local',
-  name:     'Dev User',
+  externalId:       'dev-local-00000000-0000-0000-0000-000000000000',
+  identityProvider: 'dev',
+  tenantId:         null,
+  email:            'dev@meridian.local',
+  name:             'Dev User',
 }
 
 /**
- * Returns { oid, tenantId, email, name } from the SWA client-principal header,
- * the DEV_CALLER if DEV_AUTH_BYPASS=true, or null if neither applies.
+ * Returns { externalId, identityProvider, tenantId, email, name } from the
+ * SWA client-principal header, DEV_CALLER if DEV_AUTH_BYPASS=true, or null.
+ *
+ * externalId is the provider's unique user ID:
+ *   - Google: the 'sub' claim (via principal.userId)
+ *   - AAD:    the objectidentifier claim
+ *
+ * tenantId is null for Google users (Google has no tenant concept).
  */
 function getCaller(request) {
   if (process.env.DEV_AUTH_BYPASS === 'true') return DEV_CALLER
@@ -35,10 +44,11 @@ function getCaller(request) {
     const claim     = (typ) => principal.claims?.find((c) => c.typ === typ)?.val
 
     return {
-      oid:      claim('http://schemas.microsoft.com/identity/claims/objectidentifier') ?? claim('oid') ?? principal.userId,
-      tenantId: claim('http://schemas.microsoft.com/identity/claims/tenantid') ?? claim('tid'),
-      email:    claim('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress') ?? claim('preferred_username') ?? principal.userDetails,
-      name:     claim('name') ?? principal.userDetails,
+      externalId:       claim('http://schemas.microsoft.com/identity/claims/objectidentifier') ?? claim('oid') ?? principal.userId,
+      identityProvider: principal.identityProvider ?? null,
+      tenantId:         claim('http://schemas.microsoft.com/identity/claims/tenantid') ?? claim('tid') ?? null,
+      email:            claim('http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress') ?? claim('preferred_username') ?? principal.userDetails,
+      name:             claim('name') ?? principal.userDetails,
     }
   } catch {
     return null
@@ -55,7 +65,7 @@ function getCaller(request) {
  */
 function requireAuth(request) {
   const caller = getCaller(request)
-  if (!caller?.oid) {
+  if (!caller?.externalId) {
     return { response: { status: 401, jsonBody: { error: 'Unauthorized' } } }
   }
   return { caller }

@@ -4,12 +4,12 @@ import { createContext, useContext, useState, useEffect } from 'react'
  * AuthContext — single interface for auth state throughout the app.
  *
  * In dev mode (VITE_DEV_AUTH=true) a hardcoded mock user is returned
- * immediately — no Entra registration required.
+ * immediately — no OAuth registration required.
  *
- * In production, SWA built-in auth handles the Entra login flow.
- * The frontend reads the current user from /.auth/me and redirects
- * to /.auth/login/aad for login. SWA injects x-ms-client-principal
- * on all API requests automatically — no bearer token management needed.
+ * In production, SWA built-in auth handles the OAuth login flow for
+ * Google and Microsoft. The frontend reads the current user from
+ * /.auth/me and SWA injects x-ms-client-principal on all API requests
+ * automatically — no bearer token management needed.
  */
 
 const AuthContext = createContext(null)
@@ -18,8 +18,7 @@ const AuthContext = createContext(null)
 
 const DEV_USER = {
   id:          0,
-  azureOid:    'dev-oid-00000000',
-  tenantId:    'dev-tenant-00000000',
+  externalId:  'dev-oid-00000000',
   email:       'dev@meridian.local',
   displayName: 'Dev User',
   avatarUrl:   null,
@@ -54,8 +53,7 @@ function SwaAuthProvider({ children }) {
         if (!p) { setUser(null); return }
         setUser({
           id:          null,
-          azureOid:    p.userId,
-          tenantId:    null,
+          externalId:  p.userId,
           email:       p.userDetails,
           displayName: p.userDetails,
           avatarUrl:   null,

@@ -20,18 +20,19 @@ CREATE TABLE meridians (
 
 -- ============================================================
 -- USERS
--- Seeded from Entra ID token on first login
+-- Seeded from OAuth provider token on first login
 -- ============================================================
 CREATE TABLE users (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    azure_oid       NVARCHAR(100) NOT NULL UNIQUE,  -- Entra object ID
-    tenant_id       NVARCHAR(100) NOT NULL,          -- Entra tenant ID
-    email           NVARCHAR(300) NOT NULL,
-    display_name    NVARCHAR(200) NOT NULL,
-    avatar_url      NVARCHAR(500) NULL,
-    created_at      DATETIME2 DEFAULT GETUTCDATE(),
-    last_login      DATETIME2 NULL,
-    is_active       BIT DEFAULT 1
+    id                INT IDENTITY(1,1) PRIMARY KEY,
+    external_id       NVARCHAR(100) NOT NULL UNIQUE,  -- OAuth provider user ID (Google sub or AAD OID)
+    tenant_id         NVARCHAR(100) NULL,              -- AAD tenant ID; NULL for Google users
+    identity_provider NVARCHAR(50)  NULL,              -- 'google' | 'aad'
+    email             NVARCHAR(300) NOT NULL,
+    display_name      NVARCHAR(200) NOT NULL,
+    avatar_url        NVARCHAR(500) NULL,
+    created_at        DATETIME2 DEFAULT GETUTCDATE(),
+    last_login        DATETIME2 NULL,
+    is_active         BIT DEFAULT 1
 );
 
 -- ============================================================
