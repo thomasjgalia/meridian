@@ -84,7 +84,7 @@ export default function WorkItemRow({
 
       {/* Title + parent context */}
       <div className="flex items-baseline gap-2 flex-1 min-w-0">
-        <span className="truncate text-gray-800">{item.title}</span>
+        <span className={`truncate ${status?.isComplete ? 'line-through text-gray-400' : 'text-gray-800'}`}>{item.title}</span>
         {parentItem && (
           <span className="hidden md:block shrink-0 text-2xs text-gray-400 truncate max-w-[160px]">
             {parentItem.title}
@@ -147,7 +147,7 @@ export default function WorkItemRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(item) }}
           title={`Add ${item.type === 'arc' ? 'Episode' : item.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all"
+          className="shrink-0 p-1 rounded bg-meridian-600 hover:bg-meridian-700 text-white transition-colors"
         >
           <Plus size={17} />
         </button>

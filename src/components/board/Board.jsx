@@ -24,10 +24,17 @@ function toMap(arr, key = 'id') {
 // ── Header hierarchy legend ───────────────────────────────────────────────────
 
 const HIERARCHY = [
-  { Icon: IconArc,     label: 'Arc',     color: 'text-violet-500' },
+  { Icon: IconArc,     label: 'Arc',     color: 'text-violet-600' },
   { Icon: IconEpisode, label: 'Episode', color: 'text-indigo-600' },
-  { Icon: IconSignal,  label: 'Signal',  color: 'text-teal-500'   },
+  { Icon: IconSignal,  label: 'Signal',  color: 'text-teal-600'   },
   { Icon: IconRelay,   label: 'Relay',   color: 'text-orange-500' },
+]
+
+const DEPTH_ORDER = { episode: 0, signal: 1, relay: 2 }
+const DEPTH_ICONS = [
+  { type: 'episode', Icon: IconEpisode, color: 'text-indigo-600' },
+  { type: 'signal',  Icon: IconSignal,  color: 'text-teal-600'   },
+  { type: 'relay',   Icon: IconRelay,   color: 'text-orange-500' },
 ]
 
 // ── Arc section header ────────────────────────────────────────────────────────
@@ -280,6 +287,7 @@ export default function Board() {
   // ── UI state ──────────────────────────────────────────────────────────────
   const [expanded,          setExpanded]          = useState(new Set())
   const [backlogCollapsed,  setBacklogCollapsed]  = useState(false)
+  const [backlogDepth,      setBacklogDepth]      = useState('episode')
   const [selectedId,        setSelectedId]        = useState(() => {
     const params = new URLSearchParams(window.location.search)
     const p = params.get('item')
@@ -827,7 +835,7 @@ export default function Board() {
           {HIERARCHY.map(({ Icon, label, color }, i) => (
             <span key={label} className="flex items-center gap-1 text-xs">
               {i > 0 && <ChevronRight size={10} className="text-gray-300 mx-0.5" />}
-              <Icon size={12} className={color} />
+              <Icon size={15} className={color} />
               <span className="text-gray-700">{label}</span>
             </span>
           ))}
@@ -907,7 +915,7 @@ export default function Board() {
               onStatusCycle={handleStatusCycle}
               onUpdate={userCanWrite ? handleUpdateSprint : undefined}
               onItemUpdate={userCanWrite ? handleUpdateItem : undefined}
-              onDelete={userCanWrite ? handleDeleteSprint : undefined}
+              onDelete={userCanManage ? handleDeleteSprint : undefined}
               onAddChild={userCanWrite ? handleAddChild : undefined}
               statusMap={statusMap}
               userMap={userMap}
@@ -929,6 +937,17 @@ export default function Board() {
                 />
                 <span className="font-semibold text-sm text-gray-800">Backlog</span>
                 <div className="flex-1" />
+                <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                  {DEPTH_ICONS.map(({ type, Icon, color }) => (
+                    <button key={type} type="button"
+                      onClick={() => setBacklogDepth(type)}
+                      title={`Show to ${type} level`}
+                      className={`p-0.5 rounded transition-colors ${DEPTH_ORDER[type] <= DEPTH_ORDER[backlogDepth] ? color : 'text-gray-300 hover:text-gray-400'}`}
+                    >
+                      <Icon size={13} />
+                    </button>
+                  ))}
+                </div>
                 <span className="text-xs text-gray-400">
                   {(() => { const n = backlogRows.filter((r) => r.type !== 'arc').length; return `${n} item${n !== 1 ? 's' : ''}` })()}
                 </span>
@@ -936,14 +955,19 @@ export default function Board() {
 
               {!backlogCollapsed && (
                 backlogRows.length > 0
-                  ? backlogRows.map((row) => {
-                      if (row.type === 'arc') {
+                  ? backlogRows
+                      .filter((r) => r.type === 'arc' || DEPTH_ORDER[r.type] <= DEPTH_ORDER[backlogDepth])
+                      .map((row) => {
+                      const clipped = row.type !== 'arc' && DEPTH_ORDER[row.type] === DEPTH_ORDER[backlogDepth]
+                        ? { ...row, hasChildren: false }
+                        : row
+                      if (clipped.type === 'arc') {
                         return (
                           <ArcHeader
-                            key={row.id}
-                            arc={row}
-                            isExpanded={expanded.has(row.id)}
-                            isSelected={row.id === selectedId}
+                            key={clipped.id}
+                            arc={clipped}
+                            isExpanded={expanded.has(clipped.id)}
+                            isSelected={clipped.id === selectedId}
                             onToggle={handleToggle}
                             onSelect={handleSelect}
                             onAddChild={userCanWrite ? handleAddChild : undefined}
@@ -952,12 +976,12 @@ export default function Board() {
                       }
                       return (
                         <WorkItemRow
-                          key={row.id}
-                          item={row}
-                          depth={Math.max(0, row.depth - 1)}
-                          hasChildren={row.hasChildren}
-                          isExpanded={expanded.has(row.id)}
-                          isSelected={row.id === selectedId}
+                          key={clipped.id}
+                          item={clipped}
+                          depth={Math.max(0, clipped.depth - 1)}
+                          hasChildren={clipped.hasChildren}
+                          isExpanded={expanded.has(clipped.id)}
+                          isSelected={clipped.id === selectedId}
                           onToggle={handleToggle}
                           onSelect={handleSelect}
                           onStatusCycle={handleStatusCycle}

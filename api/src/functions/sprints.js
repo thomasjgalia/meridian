@@ -2,7 +2,7 @@ const { app } = require('@azure/functions')
 const { query, sql } = require('../shared/db')
 const { requireAuth } = require('../shared/auth')
 const { resolveUser } = require('../shared/user')
-const { getMemberRole, canWrite } = require('../shared/roles')
+const { getMemberRole, canWrite, canManage } = require('../shared/roles')
 
 // ── POST /api/sprints ──────────────────────────────────────────────────────────
 
@@ -136,8 +136,8 @@ app.http('deleteSprint', {
     }
 
     const role = await getMemberRole(userId, check.recordset[0].meridian_id)
-    if (!canWrite(role)) {
-      return { status: 403, jsonBody: { error: role === null ? 'Forbidden' : 'Viewers cannot delete sprints' } }
+    if (!canManage(role)) {
+      return { status: 403, jsonBody: { error: role === null ? 'Forbidden' : 'Only owners can delete sprints' } }
     }
 
     await query(

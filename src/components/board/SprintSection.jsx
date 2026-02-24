@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, Pencil, Plus, CalendarDays } from 'lucide-react'
-import { TYPE_ICONS } from '../icons'
+import { TYPE_ICONS, IconEpisode, IconSignal, IconRelay } from '../icons'
 import { StatusDot } from '../ui/StatusChip'
 import Avatar from '../ui/Avatar'
 import SprintEditModal from './SprintEditModal'
@@ -22,6 +22,8 @@ const STATE_BADGE = {
 }
 
 const STATE_CYCLE = { planning: 'active', active: 'complete', complete: 'planning' }
+
+const DEPTH_ORDER = { episode: 0, signal: 1, relay: 2 }
 
 const INDENT = 14
 
@@ -117,7 +119,7 @@ function SprintItemRow({
 
       {/* Title + parent context */}
       <div className="flex items-baseline gap-2 flex-1 min-w-0">
-        <span className="truncate text-gray-800">{row.title}</span>
+        <span className={`truncate ${status?.isComplete ? 'line-through text-gray-400' : 'text-gray-800'}`}>{row.title}</span>
         {parentName && (
           <span className="hidden md:block shrink-0 text-2xs text-gray-400 truncate max-w-[160px]">
             {parentName}
@@ -172,7 +174,7 @@ function SprintItemRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(row) }}
           title={`Add ${row.type === 'arc' ? 'Episode' : row.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-1 rounded text-gray-400 hover:text-meridian-600 hover:bg-meridian-50 opacity-100 sm:opacity-40 sm:group-hover:opacity-100 transition-all"
+          className="shrink-0 p-1 rounded bg-meridian-600 hover:bg-meridian-700 text-white transition-colors"
         >
           <Plus size={17} />
         </button>
@@ -199,6 +201,7 @@ export default function SprintSection({
   const [collapsed,    setCollapsed]    = useState(defaultCollapsed)
   const [collapsedIds, setCollapsedIds] = useState(new Set())
   const [editOpen,     setEditOpen]     = useState(false)
+  const [depth,        setDepth]        = useState('episode')
 
   const handleToggle = (id) => {
     setCollapsedIds((prev) => {
@@ -250,6 +253,25 @@ export default function SprintSection({
 
         <div className="flex-1" />
 
+        {/* Depth selector */}
+        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+          {[
+            { type: 'episode', Icon: IconEpisode, color: 'text-indigo-600' },
+            { type: 'signal',  Icon: IconSignal,  color: 'text-teal-600'   },
+            { type: 'relay',   Icon: IconRelay,   color: 'text-orange-500' },
+          ].map(({ type, Icon, color }) => (
+            <button key={type} type="button"
+              onClick={() => setDepth(type)}
+              title={`Show to ${type} level`}
+              className={`p-0.5 rounded transition-colors ${
+                DEPTH_ORDER[type] <= DEPTH_ORDER[depth] ? color : 'text-gray-300 hover:text-gray-400'
+              }`}
+            >
+              <Icon size={13} />
+            </button>
+          ))}
+        </div>
+
         <span className="text-xs text-gray-400 shrink-0">
           {items.length} item{items.length !== 1 ? 's' : ''}
         </span>
@@ -281,22 +303,29 @@ export default function SprintSection({
       {/* ── Sprint items ── */}
       {!collapsed && (
         rows.length > 0
-          ? rows.map((row) => (
-              <SprintItemRow
-                key={row.id}
-                row={row}
-                isSelected={row.id === selectedId}
-                isExpanded={!collapsedIds.has(row.id)}
-                parentName={row.parentId ? allItemMap[row.parentId]?.title : null}
-                onSelect={onSelect}
-                onToggle={handleToggle}
-                onStatusCycle={onStatusCycle}
-                onAddChild={onAddChild}
-                onUpdate={onItemUpdate}
-                statusMap={statusMap}
-                userMap={userMap}
-              />
-            ))
+          ? rows
+              .filter((r) => DEPTH_ORDER[r.type] <= DEPTH_ORDER[depth])
+              .map((row) => {
+                const clipped = DEPTH_ORDER[row.type] === DEPTH_ORDER[depth]
+                  ? { ...row, hasChildren: false }
+                  : row
+                return (
+                  <SprintItemRow
+                    key={clipped.id}
+                    row={clipped}
+                    isSelected={clipped.id === selectedId}
+                    isExpanded={!collapsedIds.has(clipped.id)}
+                    parentName={clipped.parentId ? allItemMap[clipped.parentId]?.title : null}
+                    onSelect={onSelect}
+                    onToggle={handleToggle}
+                    onStatusCycle={onStatusCycle}
+                    onAddChild={onAddChild}
+                    onUpdate={onItemUpdate}
+                    statusMap={statusMap}
+                    userMap={userMap}
+                  />
+                )
+              })
           : (
             <div className="px-12 py-3 text-sm text-gray-400 italic bg-white border-b border-gray-100">
               No items assigned to this sprint yet.
