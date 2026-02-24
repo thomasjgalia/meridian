@@ -89,7 +89,7 @@ function SprintItemRow({
 
   const rowBg = isSelected
     ? '#f0fdfa'
-    : status?.isBlocked || status?.isComplete
+    : status?.isBlocked
       ? status.color + '14'
       : undefined
 
@@ -267,7 +267,7 @@ export default function SprintSection({
                 DEPTH_ORDER[type] <= DEPTH_ORDER[depth] ? color : 'text-gray-300 hover:text-gray-400'
               }`}
             >
-              <Icon size={13} />
+              <Icon size={18} />
             </button>
           ))}
         </div>

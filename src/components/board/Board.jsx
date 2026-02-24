@@ -718,7 +718,7 @@ export default function Board() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <IconSextant size={28} className="text-meridian-600 animate-pulse" />
+        <IconSextant size={28} className="animate-pulse" style={{ color: 'oklch(42.4% 0.199 265.638)' }} />
       </div>
     )
   }
@@ -753,7 +753,7 @@ export default function Board() {
             className="flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-gray-100 transition-colors group"
             title="Manage Meridians"
           >
-            <IconSextant size={20} className="text-meridian-600 shrink-0" />
+            <IconSextant size={20} className="shrink-0" style={{ color: 'oklch(42.4% 0.199 265.638)' }} />
             <span className="text-gray-900 font-semibold text-sm tracking-tight">Meridian</span>
             <ChevronRight
               size={12}
@@ -944,7 +944,7 @@ export default function Board() {
                       title={`Show to ${type} level`}
                       className={`p-0.5 rounded transition-colors ${DEPTH_ORDER[type] <= DEPTH_ORDER[backlogDepth] ? color : 'text-gray-300 hover:text-gray-400'}`}
                     >
-                      <Icon size={13} />
+                      <Icon size={18} />
                     </button>
                   ))}
                 </div>

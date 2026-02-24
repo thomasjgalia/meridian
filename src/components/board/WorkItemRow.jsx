@@ -51,7 +51,7 @@ export default function WorkItemRow({
   const indentPx = `calc(var(--board-px) + ${depth * INDENT}px)`
   const rowBg = isSelected
     ? '#f0fdfa'
-    : status?.isBlocked || status?.isComplete
+    : status?.isBlocked
       ? status.color + '14'
       : undefined
 
