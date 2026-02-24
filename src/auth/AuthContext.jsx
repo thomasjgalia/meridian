@@ -6,10 +6,9 @@ import { createContext, useContext, useState, useEffect } from 'react'
  * In dev mode (VITE_DEV_AUTH=true) a hardcoded mock user is returned
  * immediately — no OAuth registration required.
  *
- * In production, SWA built-in auth handles the OAuth login flow for
- * Google and Microsoft. The frontend reads the current user from
- * /.auth/me and SWA injects x-ms-client-principal on all API requests
- * automatically — no bearer token management needed.
+ * In production, SWA built-in auth handles the Microsoft (AAD) login flow.
+ * The frontend reads the current user from /.auth/me and SWA injects
+ * x-ms-client-principal on all API requests automatically.
  */
 
 const AuthContext = createContext(null)
@@ -32,7 +31,6 @@ function DevAuthProvider({ children }) {
     isAuthenticated,
     isLoading:       false,
     login:           () => setIsAuthenticated(true),
-    loginGoogle:     () => setIsAuthenticated(true),
     logout:          () => setIsAuthenticated(false),
     getToken:        async () => 'dev-token',
   }
@@ -69,10 +67,6 @@ function SwaAuthProvider({ children }) {
     login:           () => {
       const redir = encodeURIComponent(window.location.pathname + window.location.search)
       window.location.href = `/.auth/login/aad?post_login_redirect_uri=${redir}`
-    },
-    loginGoogle:     () => {
-      const redir = encodeURIComponent(window.location.pathname + window.location.search)
-      window.location.href = `/.auth/login/google?post_login_redirect_uri=${redir}`
     },
     logout:          () => { window.location.href = '/.auth/logout' },
     getToken:        async () => null, // SWA injects auth headers for API calls automatically
