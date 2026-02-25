@@ -66,6 +66,7 @@ function mapItem(r) {
     startDate:   r.start_date,
     dueDate:     r.due_date,
     position:    r.position,
+    createdAt:   r.created_at ? r.created_at.toISOString().slice(0, 10) : null,
   }
 }
 
@@ -140,11 +141,13 @@ app.http('board', {
         query(
           `SELECT wi.id, wi.meridian_id, wi.parent_id, wi.type, wi.title,
                   wi.description, wi.status_id, wi.assignee_id, wi.sprint_id,
-                  wi.start_date, wi.due_date, wi.position
+                  wi.start_date, wi.due_date, wi.position, wi.created_at
            FROM   work_items wi
            JOIN   meridian_members mm ON mm.meridian_id = wi.meridian_id
            WHERE  mm.user_id = @userId AND wi.is_active = 1
-           ORDER  BY wi.meridian_id, wi.position`,
+           ORDER  BY wi.meridian_id,
+                     CASE wi.type WHEN 'arc' THEN 0 WHEN 'episode' THEN 1 WHEN 'signal' THEN 2 WHEN 'relay' THEN 3 ELSE 9 END,
+                     COALESCE(wi.created_at, wi.due_date)`,
           [{ name: 'userId', type: sql.Int, value: userId }]
         ),
 

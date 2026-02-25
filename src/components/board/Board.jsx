@@ -104,6 +104,16 @@ function matchesFilters(item, filters, itemMap) {
   return true
 }
 
+const TYPE_ORDER = { arc: 0, episode: 1, signal: 2, relay: 3 }
+
+function compareItems(a, b) {
+  const tDiff = (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9)
+  if (tDiff !== 0) return tDiff
+  const da = a.createdAt ?? a.dueDate ?? '9999-99-99'
+  const db = b.createdAt ?? b.dueDate ?? '9999-99-99'
+  return da < db ? -1 : da > db ? 1 : 0
+}
+
 function buildBacklogRows(items, itemMap, expandedIds, filters) {
   const hasFilters =
     filters.meridianIds.length > 0 ||
@@ -119,7 +129,7 @@ function buildBacklogRows(items, itemMap, expandedIds, filters) {
     if (!childrenOf[key]) childrenOf[key] = []
     childrenOf[key].push(item)
   })
-  Object.values(childrenOf).forEach((arr) => arr.sort((a, b) => a.position - b.position))
+  Object.values(childrenOf).forEach((arr) => arr.sort(compareItems))
 
   if (hasFilters) {
     const matchingIds = new Set(items.filter((i) => matchesFilters(i, filters, itemMap)).map((i) => i.id))
@@ -430,7 +440,7 @@ export default function Board() {
             }
             return true
           })
-          .sort((a, b) => a.position - b.position),
+          .sort(compareItems),
       }))
       .filter((g) => filters.sprintId === null || filters.sprintId === g.sprint.id),
     [items, filters, itemMap, sortedSprints, activeMeridianId, overdueOnly, statusMap]
@@ -455,7 +465,7 @@ export default function Board() {
   // ── Slide panel data ───────────────────────────────────────────────────────
   const selectedItem = selectedId ? itemMap[selectedId] : null
   const childItems   = selectedItem
-    ? items.filter((i) => i.parentId === selectedItem.id).sort((a, b) => a.position - b.position)
+    ? items.filter((i) => i.parentId === selectedItem.id).sort(compareItems)
     : []
 
   // ── Item handlers ──────────────────────────────────────────────────────────
@@ -673,7 +683,7 @@ export default function Board() {
         if (!childrenOf[key]) childrenOf[key] = []
         childrenOf[key].push(item)
       })
-      Object.values(childrenOf).forEach((arr) => arr.sort((a, b) => a.position - b.position))
+      Object.values(childrenOf).forEach((arr) => arr.sort(compareItems))
       function dfs(children, depth) {
         for (const item of children) {
           lines.push(fmtItem(item, depth))
@@ -963,7 +973,7 @@ export default function Board() {
                       title={`Show to ${type} level`}
                       className={`p-0.5 rounded transition-colors ${DEPTH_ORDER[type] <= DEPTH_ORDER[backlogDepth] ? color : 'text-gray-300 hover:text-gray-400'}`}
                     >
-                      <Icon size={18} />
+                      <Icon size={20} />
                     </button>
                   ))}
                 </div>

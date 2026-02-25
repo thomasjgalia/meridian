@@ -25,6 +25,16 @@ const STATE_CYCLE = { planning: 'active', active: 'complete', complete: 'plannin
 
 const DEPTH_ORDER = { episode: 0, signal: 1, relay: 2 }
 
+const TYPE_ORDER = { arc: 0, episode: 1, signal: 2, relay: 3 }
+
+function compareItems(a, b) {
+  const tDiff = (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9)
+  if (tDiff !== 0) return tDiff
+  const da = a.createdAt ?? a.dueDate ?? '9999-99-99'
+  const db = b.createdAt ?? b.dueDate ?? '9999-99-99'
+  return da < db ? -1 : da > db ? 1 : 0
+}
+
 const INDENT = 14
 
 function formatDate(str) {
@@ -52,7 +62,7 @@ function buildSprintTree(sprintItems, collapsedIds) {
     if (!childrenOf[key]) childrenOf[key] = []
     childrenOf[key].push(item)
   })
-  Object.values(childrenOf).forEach((arr) => arr.sort((a, b) => a.position - b.position))
+  Object.values(childrenOf).forEach((arr) => arr.sort(compareItems))
 
   const rows = []
   function dfs(children, depth) {
@@ -117,13 +127,23 @@ function SprintItemRow({
 
       {Icon && <Icon className={`shrink-0 w-6 h-6 sm:w-5 sm:h-5 ${TYPE_COLOR[row.type]}`} />}
 
-      {/* Title + parent context */}
-      <div className="flex items-baseline gap-2 flex-1 min-w-0">
+      {/* Title + parent context + add-child */}
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
         <span className={`truncate ${status?.isComplete ? 'line-through text-gray-400' : 'text-gray-800'}`}>{row.title}</span>
         {parentName && (
           <span className="hidden md:block shrink-0 text-2xs text-gray-400 truncate max-w-[160px]">
             {parentName}
           </span>
+        )}
+        {CAN_ADD_CHILD[row.type] && onAddChild && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAddChild(row) }}
+            title={`Add ${row.type === 'arc' ? 'Episode' : row.type === 'episode' ? 'Signal' : 'Relay'}`}
+            className="shrink-0 p-0.5 rounded text-gray-300 hover:text-gray-500 transition-colors"
+          >
+            <Plus size={13} />
+          </button>
         )}
       </div>
 
@@ -161,24 +181,12 @@ function SprintItemRow({
         </div>
       )}
 
-      <Avatar user={user} size={24} className="shrink-0 sm:w-5 sm:h-5" />
+      <Avatar user={user} size={24} className="shrink-0 sm:w-5 sm:h-5 opacity-50" />
 
       {/* Status indicator */}
       <div onClick={(e) => e.stopPropagation()} className="shrink-0 p-2 -m-2 sm:p-0 sm:m-0">
         <StatusDot status={status} onClick={() => onStatusCycle(row.id)} />
       </div>
-
-      {/* Add child button — visible on hover for non-relay items */}
-      {CAN_ADD_CHILD[row.type] && onAddChild && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onAddChild(row) }}
-          title={`Add ${row.type === 'arc' ? 'Episode' : row.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-0.5 rounded text-gray-300 hover:text-meridian-500 transition-colors opacity-0 group-hover:opacity-100"
-        >
-          <Plus size={14} />
-        </button>
-      )}
     </div>
   )
 }
@@ -268,7 +276,7 @@ export default function SprintSection({
                 DEPTH_ORDER[type] <= DEPTH_ORDER[depth] ? color : 'text-gray-300 hover:text-gray-400'
               }`}
             >
-              <Icon size={18} />
+              <Icon size={20} />
             </button>
           ))}
         </div>

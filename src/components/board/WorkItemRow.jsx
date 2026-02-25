@@ -82,13 +82,23 @@ export default function WorkItemRow({
         <Icon size={18} className={`shrink-0 ${TYPE_COLOR[item.type]}`} />
       )}
 
-      {/* Title + parent context */}
-      <div className="flex items-baseline gap-2 flex-1 min-w-0">
+      {/* Title + parent context + add-child */}
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
         <span className={`truncate ${status?.isComplete ? 'line-through text-gray-400' : 'text-gray-800'}`}>{item.title}</span>
         {parentItem && (
           <span className="hidden md:block shrink-0 text-2xs text-gray-400 truncate max-w-[160px]">
             {parentItem.title}
           </span>
+        )}
+        {CAN_ADD_CHILD[item.type] && onAddChild && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onAddChild(item) }}
+            title={`Add ${item.type === 'arc' ? 'Episode' : item.type === 'episode' ? 'Signal' : 'Relay'}`}
+            className="shrink-0 p-0.5 rounded text-gray-300 hover:text-gray-500 transition-colors"
+          >
+            <Plus size={13} />
+          </button>
         )}
       </div>
 
@@ -134,24 +144,12 @@ export default function WorkItemRow({
       )}
 
       {/* Assignee avatar */}
-      <Avatar user={user} size={24} className="shrink-0 sm:w-5 sm:h-5" />
+      <Avatar user={user} size={24} className="shrink-0 sm:w-5 sm:h-5 opacity-50" />
 
       {/* Status indicator */}
       <div onClick={(e) => e.stopPropagation()} className="shrink-0 p-2 -m-2 sm:p-0 sm:m-0">
         <StatusDot status={status} onClick={() => onStatusCycle(item.id)} />
       </div>
-
-      {/* Add child button — visible on hover for non-relay items */}
-      {CAN_ADD_CHILD[item.type] && onAddChild && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onAddChild(item) }}
-          title={`Add ${item.type === 'arc' ? 'Episode' : item.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-0.5 rounded text-gray-300 hover:text-meridian-500 transition-colors opacity-0 group-hover:opacity-100"
-        >
-          <Plus size={14} />
-        </button>
-      )}
     </div>
   )
 }
