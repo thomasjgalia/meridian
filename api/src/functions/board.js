@@ -147,7 +147,7 @@ app.http('board', {
            WHERE  mm.user_id = @userId AND wi.is_active = 1
            ORDER  BY wi.meridian_id,
                      CASE wi.type WHEN 'arc' THEN 0 WHEN 'episode' THEN 1 WHEN 'signal' THEN 2 WHEN 'relay' THEN 3 ELSE 9 END,
-                     COALESCE(wi.created_at, wi.due_date)`,
+                     COALESCE(wi.due_date, wi.created_at)`,
           [{ name: 'userId', type: sql.Int, value: userId }]
         ),
 

@@ -109,8 +109,8 @@ const TYPE_ORDER = { arc: 0, episode: 1, signal: 2, relay: 3 }
 function compareItems(a, b) {
   const tDiff = (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9)
   if (tDiff !== 0) return tDiff
-  const da = a.createdAt ?? a.dueDate ?? '9999-99-99'
-  const db = b.createdAt ?? b.dueDate ?? '9999-99-99'
+  const da = a.dueDate ?? a.createdAt ?? '9999-99-99'
+  const db = b.dueDate ?? b.createdAt ?? '9999-99-99'
   return da < db ? -1 : da > db ? 1 : 0
 }
 
