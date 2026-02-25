@@ -174,9 +174,9 @@ function SprintItemRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(row) }}
           title={`Add ${row.type === 'arc' ? 'Episode' : row.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-1 rounded bg-meridian-600 hover:bg-meridian-700 text-white transition-colors"
+          className="shrink-0 p-0.5 rounded text-gray-300 hover:text-meridian-500 transition-colors opacity-0 group-hover:opacity-100"
         >
-          <Plus size={17} />
+          <Plus size={14} />
         </button>
       )}
     </div>
@@ -197,6 +197,7 @@ export default function SprintSection({
   userMap,
   allItemMap,
   defaultCollapsed = false,
+  overdueOnly = false,
 }) {
   const [collapsed,    setCollapsed]    = useState(defaultCollapsed)
   const [collapsedIds, setCollapsedIds] = useState(new Set())
@@ -304,9 +305,9 @@ export default function SprintSection({
       {!collapsed && (
         rows.length > 0
           ? rows
-              .filter((r) => DEPTH_ORDER[r.type] <= DEPTH_ORDER[depth])
+              .filter((r) => overdueOnly || DEPTH_ORDER[r.type] <= DEPTH_ORDER[depth])
               .map((row) => {
-                const clipped = DEPTH_ORDER[row.type] === DEPTH_ORDER[depth]
+                const clipped = !overdueOnly && DEPTH_ORDER[row.type] === DEPTH_ORDER[depth]
                   ? { ...row, hasChildren: false }
                   : row
                 return (

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Plus, ChevronRight, Settings, Download, Pencil, LogOut, Clock } from 'lucide-react'
+import { Plus, ChevronRight, Settings, Download, Pencil, LogOut } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { api } from '../../api/client'
 import { IconSextant, IconArc, IconEpisode, IconSignal, IconRelay } from '../icons'
@@ -872,7 +872,7 @@ export default function Board() {
           <button
             type="button"
             onClick={() => setNewSprintOpen(true)}
-            className="hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
           >
             <Plus size={13} /> Sprint
           </button>
@@ -882,7 +882,7 @@ export default function Board() {
           <button
             type="button"
             onClick={() => { setNewWorkContext(null); setNewWorkOpen(true) }}
-            className="hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
+            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
           >
             <Plus size={13} /> Work
           </button>
@@ -939,6 +939,7 @@ export default function Board() {
               userMap={userMap}
               allItemMap={itemMap}
               defaultCollapsed={sprint.state === 'complete'}
+              overdueOnly={overdueOnly}
             />
           ))}
 
@@ -974,9 +975,9 @@ export default function Board() {
               {!backlogCollapsed && (
                 backlogRows.length > 0
                   ? backlogRows
-                      .filter((r) => r.type === 'arc' || DEPTH_ORDER[r.type] <= DEPTH_ORDER[backlogDepth])
+                      .filter((r) => overdueOnly || r.type === 'arc' || DEPTH_ORDER[r.type] <= DEPTH_ORDER[backlogDepth])
                       .map((row) => {
-                      const clipped = row.type !== 'arc' && DEPTH_ORDER[row.type] === DEPTH_ORDER[backlogDepth]
+                      const clipped = !overdueOnly && row.type !== 'arc' && DEPTH_ORDER[row.type] === DEPTH_ORDER[backlogDepth]
                         ? { ...row, hasChildren: false }
                         : row
                       if (clipped.type === 'arc') {

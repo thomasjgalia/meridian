@@ -147,9 +147,9 @@ export default function WorkItemRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(item) }}
           title={`Add ${item.type === 'arc' ? 'Episode' : item.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-1 rounded text-gray-300 hover:text-meridian-500 transition-colors"
+          className="shrink-0 p-0.5 rounded text-gray-300 hover:text-meridian-500 transition-colors opacity-0 group-hover:opacity-100"
         >
-          <Plus size={17} />
+          <Plus size={14} />
         </button>
       )}
     </div>
