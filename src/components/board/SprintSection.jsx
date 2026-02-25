@@ -30,6 +30,8 @@ const TYPE_ORDER = { arc: 0, episode: 1, signal: 2, relay: 3 }
 function compareItems(a, b) {
   const tDiff = (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9)
   if (tDiff !== 0) return tDiff
+  // Group siblings that share the same parent arc together
+  if ((a.parentId ?? 0) !== (b.parentId ?? 0)) return (a.parentId ?? 0) - (b.parentId ?? 0)
   const da = a.dueDate ?? a.createdAt ?? '9999-99-99'
   const db = b.dueDate ?? b.createdAt ?? '9999-99-99'
   return da < db ? -1 : da > db ? 1 : 0
