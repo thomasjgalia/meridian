@@ -863,7 +863,7 @@ export default function Board() {
           {HIERARCHY.map(({ Icon, label, color }, i) => (
             <span key={label} className="flex items-center gap-1 text-xs">
               {i > 0 && <ChevronRight size={10} className="text-gray-300 mx-0.5" />}
-              <Icon size={20} className={color} />
+              <Icon size={24} className={color} />
               <span className="text-gray-700">{label}</span>
             </span>
           ))}
@@ -975,7 +975,7 @@ export default function Board() {
                       title={`Show to ${type} level`}
                       className={`p-0.5 rounded transition-colors ${DEPTH_ORDER[type] <= DEPTH_ORDER[backlogDepth] ? color : 'text-gray-300 hover:text-gray-400'}`}
                     >
-                      <Icon size={20} />
+                      <Icon size={22} />
                     </button>
                   ))}
                 </div>
