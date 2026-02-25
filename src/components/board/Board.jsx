@@ -26,14 +26,14 @@ function toMap(arr, key = 'id') {
 const HIERARCHY = [
   { Icon: IconArc,     label: 'Arc',     color: 'text-violet-600' },
   { Icon: IconEpisode, label: 'Episode', color: 'text-indigo-600' },
-  { Icon: IconSignal,  label: 'Signal',  color: 'text-teal-600'   },
+  { Icon: IconSignal,  label: 'Signal',  color: 'text-rose-600'   },
   { Icon: IconRelay,   label: 'Relay',   color: 'text-orange-500' },
 ]
 
 const DEPTH_ORDER = { episode: 0, signal: 1, relay: 2 }
 const DEPTH_ICONS = [
   { type: 'episode', Icon: IconEpisode, color: 'text-indigo-600' },
-  { type: 'signal',  Icon: IconSignal,  color: 'text-teal-600'   },
+  { type: 'signal',  Icon: IconSignal,  color: 'text-rose-600'   },
   { type: 'relay',   Icon: IconRelay,   color: 'text-orange-500' },
 ]
 
@@ -59,7 +59,7 @@ function ArcHeader({ arc, isExpanded, isSelected, onToggle, onSelect, onAddChild
         />
       </button>
 
-      <IconArc size={13} className="text-violet-400 shrink-0" />
+      <IconArc size={18} className="text-violet-400 shrink-0" />
 
       <button
         type="button"
@@ -746,7 +746,7 @@ export default function Board() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <IconSextant size={28} className="animate-pulse" style={{ color: 'oklch(42.4% 0.199 265.638)' }} />
+        <IconSextant size={28} className="animate-pulse text-meridian-600" />
       </div>
     )
   }
@@ -769,7 +769,7 @@ export default function Board() {
   }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-50">
+    <div className="flex flex-col h-screen overflow-hidden bg-white">
 
       {/* ── Top bar ── */}
       <header className="flex items-center gap-3 board-px h-12 border-b border-gray-200 bg-white shrink-0">
@@ -781,7 +781,7 @@ export default function Board() {
             className="flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-gray-100 transition-colors group"
             title="Manage Meridians"
           >
-            <IconSextant size={20} className="shrink-0" style={{ color: 'oklch(42.4% 0.199 265.638)' }} />
+            <IconSextant size={20} className="shrink-0 text-meridian-600" />
             <span className="text-gray-900 font-semibold text-sm tracking-tight">Meridian</span>
             <ChevronRight
               size={12}

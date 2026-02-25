@@ -1,4 +1,4 @@
-import { Activity, XCircle, Check } from 'lucide-react'
+import { Activity, X, Check } from 'lucide-react'
 
 /**
  * Returns the icon component for a status, or null for the default (box) style.
@@ -6,7 +6,7 @@ import { Activity, XCircle, Check } from 'lucide-react'
  */
 function statusIcon(status) {
   if (status.isDefault)  return null      // Standby — keep as colored box
-  if (status.isBlocked)  return XCircle   // Static
+  if (status.isBlocked)  return X         // Static
   if (status.isComplete) return Check     // Over
   return Activity                         // Live (catch-all for in-progress)
 }

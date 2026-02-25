@@ -11,13 +11,13 @@ const CAN_ADD_CHILD = { arc: true, episode: true, signal: true }
 const TYPE_COLOR = {
   arc:     'text-violet-600',
   episode: 'text-indigo-600',
-  signal:  'text-teal-600',
+  signal:  'text-rose-600',
   relay:   'text-orange-500',
 }
 
 const STATE_BADGE = {
-  active:   'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
-  planning: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  active:   'bg-meridian-50 text-meridian-700 ring-1 ring-meridian-200',
+  planning: 'bg-meridian-50 text-meridian-400 ring-1 ring-meridian-200',
   complete: 'bg-gray-100 text-gray-500',
 }
 
@@ -127,7 +127,7 @@ function SprintItemRow({
         />
       </button>
 
-      {Icon && <Icon className={`shrink-0 w-6 h-6 sm:w-5 sm:h-5 ${TYPE_COLOR[row.type]}`} />}
+      {Icon && <Icon size={18} className={`shrink-0 ${TYPE_COLOR[row.type]}`} />}
 
       {/* Title + parent context + add-child */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -268,7 +268,7 @@ export default function SprintSection({
         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
           {[
             { type: 'episode', Icon: IconEpisode, color: 'text-indigo-600' },
-            { type: 'signal',  Icon: IconSignal,  color: 'text-teal-600'   },
+            { type: 'signal',  Icon: IconSignal,  color: 'text-rose-600'   },
             { type: 'relay',   Icon: IconRelay,   color: 'text-orange-500' },
           ].map(({ type, Icon, color }) => (
             <button key={type} type="button"
@@ -291,7 +291,7 @@ export default function SprintSection({
         <div className="hidden sm:flex items-center gap-1.5 shrink-0">
           <div className="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-teal-500 rounded-full transition-all duration-300"
+              className="h-full bg-meridian-500 rounded-full transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
           </div>

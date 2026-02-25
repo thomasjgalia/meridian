@@ -11,7 +11,7 @@ const INDENT = 14
 const TYPE_COLOR = {
   arc:     'text-violet-600',
   episode: 'text-indigo-600',
-  signal:  'text-teal-600',
+  signal:  'text-rose-600',
   relay:   'text-orange-500',
 }
 

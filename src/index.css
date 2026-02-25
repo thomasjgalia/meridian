@@ -12,10 +12,12 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
-    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    @apply bg-white text-gray-900;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
     font-size: 14px;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Compact scrollbars */
