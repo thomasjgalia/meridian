@@ -79,7 +79,7 @@ export default function WorkItemRow({
 
       {/* Type icon */}
       {Icon && (
-        <Icon className={`shrink-0 w-6 h-6 sm:w-5 sm:h-5 ${TYPE_COLOR[item.type]}`} />
+        <Icon size={18} className={`shrink-0 ${TYPE_COLOR[item.type]}`} />
       )}
 
       {/* Title + parent context */}
@@ -147,7 +147,7 @@ export default function WorkItemRow({
           type="button"
           onClick={(e) => { e.stopPropagation(); onAddChild(item) }}
           title={`Add ${item.type === 'arc' ? 'Episode' : item.type === 'episode' ? 'Signal' : 'Relay'}`}
-          className="shrink-0 p-1 rounded bg-meridian-600 hover:bg-meridian-700 text-white transition-colors"
+          className="shrink-0 p-1 rounded text-gray-300 hover:text-meridian-500 transition-colors"
         >
           <Plus size={17} />
         </button>

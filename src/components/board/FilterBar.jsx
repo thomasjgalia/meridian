@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, X, Check, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, X, Check, SlidersHorizontal, Clock } from 'lucide-react'
 
 // ── Meridian switcher ─────────────────────────────────────────────────────────
 
@@ -215,7 +215,7 @@ function FilterDropdown({ arcs, episodes, statuses, users, sprints, filters, onC
 
 // ── FilterBar ─────────────────────────────────────────────────────────────────
 
-export default function FilterBar({ meridians, activeMeridianId, onMeridianChange, arcs, episodes, statuses, users, sprints, filters, onChange }) {
+export default function FilterBar({ meridians, activeMeridianId, onMeridianChange, arcs, episodes, statuses, users, sprints, filters, onChange, overdueOnly, onOverdueToggle }) {
   return (
     <div className="flex items-center gap-2 board-px h-9 border-b border-gray-200 bg-white shrink-0">
       <MeridianSwitcher
@@ -235,6 +235,17 @@ export default function FilterBar({ meridians, activeMeridianId, onMeridianChang
         filters={filters}
         onChange={onChange}
       />
+
+      <div className="w-px h-4 bg-gray-200" />
+
+      <button
+        type="button"
+        onClick={onOverdueToggle}
+        title={overdueOnly ? 'Showing overdue items — click to clear' : 'Filter: due today or overdue'}
+        className={`p-1 rounded transition-colors ${overdueOnly ? 'text-red-500 bg-red-50 hover:bg-red-100' : 'text-gray-400 hover:text-gray-600'}`}
+      >
+        <Clock size={15} />
+      </button>
     </div>
   )
 }

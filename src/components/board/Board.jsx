@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Plus, ChevronRight, Settings, Download, Pencil, LogOut } from 'lucide-react'
+import { Plus, ChevronRight, Settings, Download, Pencil, LogOut, Clock } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { api } from '../../api/client'
 import { IconSextant, IconArc, IconEpisode, IconSignal, IconRelay } from '../icons'
@@ -294,6 +294,7 @@ export default function Board() {
     return p ? parseInt(p, 10) : null
   })
   const [filters,           setFilters]           = useState(INITIAL_FILTERS)
+  const [overdueOnly,       setOverdueOnly]       = useState(false)
   const [activeMeridianId,  setActiveMeridianId]  = useState(null)
   const [newWorkOpen,       setNewWorkOpen]       = useState(false)
   const [newWorkContext,    setNewWorkContext]     = useState(null) // { type, arcId?, episodeId?, signalId? }
@@ -411,6 +412,8 @@ export default function Board() {
     [statuses, activeMeridianId]
   )
 
+  const statusMap = useMemo(() => toMap(statuses), [statuses])
+
   // ── Sprint groups — scoped to active meridian ──────────────────────────────
   // Arcs are never sprint items — they're containers that span many sprints.
   const sprintGroups = useMemo(() =>
@@ -419,22 +422,37 @@ export default function Board() {
       .map((sprint) => ({
         sprint,
         items: items
-          .filter((i) => i.sprintId === sprint.id && i.type !== 'arc' && matchesFilters(i, filters, itemMap))
+          .filter((i) => {
+            if (i.sprintId !== sprint.id || i.type === 'arc') return false
+            if (!matchesFilters(i, filters, itemMap)) return false
+            if (overdueOnly) {
+              const today = new Date().toLocaleDateString('en-CA')
+              if (!i.dueDate || i.dueDate.slice(0, 10) > today) return false
+              if (statusMap[i.statusId]?.isComplete) return false
+            }
+            return true
+          })
           .sort((a, b) => a.position - b.position),
       }))
       .filter((g) => filters.sprintId === null || filters.sprintId === g.sprint.id),
-    [items, filters, itemMap, sortedSprints, activeMeridianId]
+    [items, filters, itemMap, sortedSprints, activeMeridianId, overdueOnly, statusMap]
   )
 
   // ── Backlog rows — scoped to active meridian ────────────────────────────────
   // Arcs always live in the backlog regardless of their sprintId.
   const backlogRows = useMemo(() => {
     if (filters.sprintId !== null) return []
-    const backlogItems = items.filter((i) =>
+    let backlogItems = items.filter((i) =>
       (i.sprintId === null || i.type === 'arc') && (!activeMeridianId || i.meridianId === activeMeridianId)
     )
+    if (overdueOnly) {
+      const today = new Date().toLocaleDateString('en-CA')
+      backlogItems = backlogItems.filter((i) =>
+        i.dueDate && i.dueDate.slice(0, 10) <= today && !statusMap[i.statusId]?.isComplete
+      )
+    }
     return buildBacklogRows(backlogItems, itemMap, expanded, filters)
-  }, [items, itemMap, expanded, filters, activeMeridianId])
+  }, [items, itemMap, expanded, filters, activeMeridianId, overdueOnly, statusMap])
 
   // ── Slide panel data ───────────────────────────────────────────────────────
   const selectedItem = selectedId ? itemMap[selectedId] : null
@@ -835,7 +853,7 @@ export default function Board() {
           {HIERARCHY.map(({ Icon, label, color }, i) => (
             <span key={label} className="flex items-center gap-1 text-xs">
               {i > 0 && <ChevronRight size={10} className="text-gray-300 mx-0.5" />}
-              <Icon size={15} className={color} />
+              <Icon size={20} className={color} />
               <span className="text-gray-700">{label}</span>
             </span>
           ))}
@@ -896,6 +914,8 @@ export default function Board() {
         sprints={sprints}
         filters={filters}
         onChange={setFilters}
+        overdueOnly={overdueOnly}
+        onOverdueToggle={() => setOverdueOnly((v) => !v)}
       />
 
       {/* ── Board + slide panel ── */}
