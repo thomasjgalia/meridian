@@ -412,8 +412,6 @@ export default function Board() {
     [statuses, activeMeridianId]
   )
 
-  const statusMap = useMemo(() => toMap(statuses), [statuses])
-
   // ── Sprint groups — scoped to active meridian ──────────────────────────────
   // Arcs are never sprint items — they're containers that span many sprints.
   const sprintGroups = useMemo(() =>
@@ -865,7 +863,7 @@ export default function Board() {
           type="button"
           onClick={handleExport}
           title="Export to text"
-          className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 transition-colors"
+          className="hidden sm:inline-flex items-center justify-center h-7 w-7 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 transition-colors"
         >
           <Download size={13} />
         </button>
@@ -874,7 +872,7 @@ export default function Board() {
           <button
             type="button"
             onClick={() => setNewSprintOpen(true)}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
+            className="hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
           >
             <Plus size={13} /> Sprint
           </button>
@@ -884,7 +882,7 @@ export default function Board() {
           <button
             type="button"
             onClick={() => { setNewWorkContext(null); setNewWorkOpen(true) }}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
+            className="hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
           >
             <Plus size={13} /> Work
           </button>
@@ -1047,6 +1045,18 @@ export default function Board() {
           />
         </div>
       </div>
+
+      {/* ── FAB — mobile only ── */}
+      {userCanWrite && (
+        <button
+          type="button"
+          onClick={() => { setNewWorkContext(null); setNewWorkOpen(true) }}
+          className="fixed bottom-6 right-5 z-50 flex sm:hidden items-center justify-center w-14 h-14 rounded-full bg-meridian-600 text-white shadow-xl active:scale-95 transition-transform"
+          title="New Work"
+        >
+          <Plus size={28} />
+        </button>
+      )}
 
       {/* ── Footer ── */}
       <footer className="shrink-0 flex items-center justify-center gap-2 h-7 border-t border-gray-200 bg-white">

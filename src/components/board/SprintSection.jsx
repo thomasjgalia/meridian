@@ -96,7 +96,7 @@ function SprintItemRow({
   return (
     <div
       onClick={() => onSelect(row.id)}
-      className="group flex items-center gap-2.5 sm:gap-2 row-height border-b border-gray-100 cursor-pointer hover:brightness-95 transition-all text-base sm:text-sm"
+      className="group flex items-center gap-2.5 sm:gap-2 row-height sm:border-b sm:border-gray-100 mx-3 mb-1 sm:mx-0 sm:mb-0 bg-white sm:bg-transparent rounded-xl sm:rounded-none shadow-sm sm:shadow-none cursor-pointer hover:brightness-95 transition-all text-base sm:text-sm"
       style={{ paddingLeft: `calc(var(--board-px) + ${row.depth * INDENT}px)`, paddingRight: 'var(--board-px)', backgroundColor: rowBg }}
     >
       {/* Expand / collapse toggle */}
@@ -228,7 +228,7 @@ export default function SprintSection({
     <div>
       {/* ── Section header ── */}
       <div
-        className="group/header flex items-center gap-3 board-px h-9 bg-gray-50 border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
+        className="group/header flex items-center gap-3 board-px h-9 sm:h-9 bg-gray-100/90 sm:bg-gray-50 backdrop-blur-sm sm:backdrop-blur-none border-y border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors select-none sticky top-0 z-10"
         onClick={() => setCollapsed((c) => !c)}
       >
         <ChevronRight

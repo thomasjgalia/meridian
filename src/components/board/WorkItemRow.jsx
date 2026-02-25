@@ -58,7 +58,7 @@ export default function WorkItemRow({
   return (
     <div
       onClick={() => onSelect(item.id)}
-      className="group flex items-center gap-2.5 sm:gap-2 row-height border-b border-gray-100 cursor-pointer hover:brightness-95 transition-all text-base sm:text-sm"
+      className="group flex items-center gap-2.5 sm:gap-2 row-height sm:border-b sm:border-gray-100 mx-3 mb-1 sm:mx-0 sm:mb-0 bg-white sm:bg-transparent rounded-xl sm:rounded-none shadow-sm sm:shadow-none cursor-pointer hover:brightness-95 transition-all text-base sm:text-sm"
       style={{ paddingLeft: indentPx, paddingRight: 'var(--board-px)', backgroundColor: rowBg }}
     >
       {/* Expand / collapse toggle */}

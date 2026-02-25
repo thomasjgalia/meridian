@@ -48,7 +48,7 @@
 
 @media (max-width: 639px) {
   .row-height {
-    height: 48px;
-    min-height: 48px;
+    height: 56px;
+    min-height: 56px;
   }
 }
