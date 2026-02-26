@@ -122,12 +122,12 @@ function SprintItemRow({
         `}
       >
         <ChevronRight
-          size={13}
+          size={15}
           className={`transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
         />
       </button>
 
-      {Icon && <Icon size={22} className={`shrink-0 ${TYPE_COLOR[row.type]}`} />}
+      {Icon && <Icon size={20} className={`shrink-0 ${TYPE_COLOR[row.type]}`} />}
 
       {/* Title + parent context + add-child */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -144,7 +144,7 @@ function SprintItemRow({
             title={`Add ${row.type === 'arc' ? 'Episode' : row.type === 'episode' ? 'Signal' : 'Relay'}`}
             className="shrink-0 p-0.5 rounded text-gray-300 hover:text-gray-500 transition-colors"
           >
-            <Plus size={13} />
+            <Plus size={15} />
           </button>
         )}
       </div>
@@ -278,7 +278,7 @@ export default function SprintSection({
                 DEPTH_ORDER[type] <= DEPTH_ORDER[depth] ? color : 'text-gray-300 hover:text-gray-400'
               }`}
             >
-              <Icon size={22} />
+              <Icon size={20} />
             </button>
           ))}
         </div>
@@ -306,7 +306,7 @@ export default function SprintSection({
             title="Edit sprint"
             className="p-1 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-200 transition-colors opacity-0 group-hover/header:opacity-100"
           >
-            <Pencil size={13} />
+            <Pencil size={15} />
           </button>
         )}
       </div>

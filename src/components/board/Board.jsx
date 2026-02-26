@@ -54,12 +54,12 @@ function ArcHeader({ arc, isExpanded, isSelected, onToggle, onSelect, onAddChild
         className="flex items-center justify-center w-4 h-4 shrink-0 text-violet-400 hover:text-violet-600 transition-colors"
       >
         <ChevronRight
-          size={13}
+          size={15}
           className={`transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
         />
       </button>
 
-      <IconArc size={18} className="text-violet-400 shrink-0" />
+      <IconArc size={20} className="text-violet-400 shrink-0" />
 
       <button
         type="button"
@@ -76,7 +76,7 @@ function ArcHeader({ arc, isExpanded, isSelected, onToggle, onSelect, onAddChild
           title="Add Episode"
           className="shrink-0 p-1 rounded text-violet-400 hover:text-violet-700 hover:bg-violet-100 opacity-0 group-hover/archdr:opacity-100 transition-all"
         >
-          <Plus size={13} />
+          <Plus size={15} />
         </button>
       )}
     </div>
@@ -975,7 +975,7 @@ export default function Board() {
                       title={`Show to ${type} level`}
                       className={`p-0.5 rounded transition-colors ${DEPTH_ORDER[type] <= DEPTH_ORDER[backlogDepth] ? color : 'text-gray-300 hover:text-gray-400'}`}
                     >
-                      <Icon size={22} />
+                      <Icon size={20} />
                     </button>
                   ))}
                 </div>

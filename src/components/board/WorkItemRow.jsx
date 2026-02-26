@@ -72,14 +72,14 @@ export default function WorkItemRow({
         `}
       >
         <ChevronRight
-          size={13}
+          size={15}
           className={`transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
         />
       </button>
 
       {/* Type icon */}
       {Icon && (
-        <Icon size={22} className={`shrink-0 ${TYPE_COLOR[item.type]}`} />
+        <Icon size={20} className={`shrink-0 ${TYPE_COLOR[item.type]}`} />
       )}
 
       {/* Title + parent context + add-child */}

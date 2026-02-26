@@ -17,7 +17,7 @@ function statusIcon(status) {
  * Shows status name as a tooltip; click cycles status.
  */
 export function StatusDot({ status, onClick }) {
-  if (!status) return <div className="w-[22px] h-[22px] shrink-0" />
+  if (!status) return <div className="w-[20px] h-[20px] shrink-0" />
 
   const Icon = statusIcon(status)
   const interactClass = onClick
@@ -31,7 +31,7 @@ export function StatusDot({ status, onClick }) {
         onClick={onClick}
         title={status.name}
         style={{ backgroundColor: status.color }}
-        className={`w-[22px] h-[22px] rounded-sm shrink-0 transition-all ${interactClass}`}
+        className={`w-[20px] h-[20px] rounded-sm shrink-0 transition-all ${interactClass}`}
       />
     )
   }
@@ -42,9 +42,9 @@ export function StatusDot({ status, onClick }) {
       onClick={onClick}
       title={status.name}
       style={{ color: status.color }}
-      className={`w-[22px] h-[22px] flex items-center justify-center shrink-0 transition-all ${interactClass}`}
+      className={`w-[20px] h-[20px] flex items-center justify-center shrink-0 transition-all ${interactClass}`}
     >
-      <Icon size={22} strokeWidth={2} />
+      <Icon size={20} strokeWidth={2} />
     </button>
   )
 }
