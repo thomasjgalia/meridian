@@ -1,5 +1,21 @@
 // src/components/icons/index.jsx
-// Meridian Icon Set — redrawn on 24x24 grid, Lucide-weight strokes
+// Meridian Icon Set — custom icons (Lighthouse, Sextant) + Lucide type icons
+
+import { SatelliteDish, RadioTower, SplinePointer, ChevronsRight } from 'lucide-react'
+
+// Type icons — Lucide icons mapped to Meridian work item types
+export const IconArc     = SplinePointer   // arc
+export const IconEpisode = SatelliteDish   // episode
+export const IconSignal  = RadioTower      // signal
+export const IconRelay   = ChevronsRight   // relay
+
+// Map item type → icon component
+export const TYPE_ICONS = {
+  arc:     IconArc,
+  episode: IconEpisode,
+  signal:  IconSignal,
+  relay:   IconRelay,
+}
 
 export const IconLighthouse = ({ size = 18, className = '' }) => (
   <svg
@@ -54,84 +70,3 @@ export const IconSextant = ({ size = 18, className = '' }) => (
   </svg>
 )
 
-export const IconArc = ({ size = 18, className = '' }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M 3 18 A 10.5 10.5 0 0 1 21 18" strokeWidth="2"/>
-  </svg>
-)
-
-export const IconEpisode = ({ size = 18, className = '' }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    {/* Dish ellipse */}
-    <ellipse cx="12" cy="13.5" rx="6.75" ry="2.25" transform="rotate(-40 12 13.5)" strokeWidth="1.5"/>
-    {/* Convex back curve */}
-    <path d="M 6.75 18 Q 12 21 17.25 9" strokeWidth="1"/>
-    {/* Center hub dot */}
-    <circle cx="12" cy="13.5" r="1" fill="currentColor" strokeWidth="0.75"/>
-    {/* Stand */}
-    <line x1="12" y1="19.5" x2="12" y2="22.5" strokeWidth="1.25"/>
-    {/* Base */}
-    <line x1="8.25" y1="22.5" x2="15.75" y2="22.5" strokeWidth="1.25"/>
-    {/* Concentric wave arcs */}
-    <path d="M 9.75 10.5 A 3 3 0 0 1 15 11.25" strokeWidth="0.75" opacity="0.7" transform="rotate(-45 12 13.5)"/>
-    <path d="M 7.5 8.25 A 5.25 5.25 0 0 1 17.25 9.375" strokeWidth="0.75" opacity="0.4" transform="rotate(-45 12 13.5)"/>
-  </svg>
-)
-
-export const IconSignal = ({ size = 18, className = '' }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <polyline points="1.5,12 5.25,12 7.5,6 9.75,18 12,9 14.25,15 16.5,12 22.5,12" strokeWidth="1.5"/>
-  </svg>
-)
-
-export const IconRelay = ({ size = 18, className = '' }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <polyline points="5.25,6 10.5,12 5.25,18"  strokeWidth="1.5"/>
-    <polyline points="9.75,6 15,12 9.75,18"    strokeWidth="1.5"/>
-    <polyline points="14.25,6 19.5,12 14.25,18" strokeWidth="1.5"/>
-  </svg>
-)
-
-// Map item type to its icon component
-export const TYPE_ICONS = {
-  arc:     IconArc,
-  episode: IconEpisode,
-  signal:  IconSignal,
-  relay:   IconRelay,
-}
