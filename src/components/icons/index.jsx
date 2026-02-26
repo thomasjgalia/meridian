@@ -1,11 +1,11 @@
 // src/components/icons/index.jsx
 // Meridian Icon Set — custom icons (Lighthouse, Sextant) + Lucide type icons
 
-import { SatelliteDish, RadioTower, SplinePointer, ChevronsRight } from 'lucide-react'
+import { DraftingCompass, RadioTower, Spline, ChevronsRight } from 'lucide-react'
 
 // Type icons — Lucide icons mapped to Meridian work item types
-export const IconArc     = SplinePointer   // arc
-export const IconEpisode = SatelliteDish   // episode
+export const IconArc     = Spline          // arc
+export const IconEpisode = DraftingCompass // episode
 export const IconSignal  = RadioTower      // signal
 export const IconRelay   = ChevronsRight   // relay
 
