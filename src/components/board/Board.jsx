@@ -59,7 +59,7 @@ function ArcHeader({ arc, isExpanded, isSelected, onToggle, onSelect, onAddChild
         />
       </button>
 
-      <IconArc size={20} className="text-violet-400 shrink-0" />
+      <IconArc size={18} className="text-violet-400 shrink-0" />
 
       <button
         type="button"
@@ -781,7 +781,7 @@ export default function Board() {
             className="flex items-center gap-1.5 rounded-md px-1.5 py-1 hover:bg-gray-100 transition-colors group"
             title="Manage Meridians"
           >
-            <IconSextant size={20} className="shrink-0 text-meridian-600" />
+            <IconSextant size={18} className="shrink-0 text-meridian-600" />
             <span className="text-gray-900 font-semibold text-sm tracking-tight">Meridian</span>
             <ChevronRight
               size={12}
@@ -975,7 +975,7 @@ export default function Board() {
                       title={`Show to ${type} level`}
                       className={`p-0.5 rounded transition-colors ${DEPTH_ORDER[type] <= DEPTH_ORDER[backlogDepth] ? color : 'text-gray-300 hover:text-gray-400'}`}
                     >
-                      <Icon size={20} />
+                      <Icon size={18} />
                     </button>
                   ))}
                 </div>

@@ -79,7 +79,7 @@ export default function WorkItemRow({
 
       {/* Type icon */}
       {Icon && (
-        <Icon size={20} className={`shrink-0 ${TYPE_COLOR[item.type]}`} />
+        <Icon size={18} className={`shrink-0 ${TYPE_COLOR[item.type]}`} />
       )}
 
       {/* Title + parent context + add-child */}

@@ -127,7 +127,7 @@ function SprintItemRow({
         />
       </button>
 
-      {Icon && <Icon size={20} className={`shrink-0 ${TYPE_COLOR[row.type]}`} />}
+      {Icon && <Icon size={18} className={`shrink-0 ${TYPE_COLOR[row.type]}`} />}
 
       {/* Title + parent context + add-child */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -278,7 +278,7 @@ export default function SprintSection({
                 DEPTH_ORDER[type] <= DEPTH_ORDER[depth] ? color : 'text-gray-300 hover:text-gray-400'
               }`}
             >
-              <Icon size={20} />
+              <Icon size={18} />
             </button>
           ))}
         </div>
