@@ -22,7 +22,7 @@ app.http('itemsCreate', {
       return { status: 400, jsonBody: { error: 'Invalid JSON' } }
     }
 
-    const { type, title, meridianId, parentId, statusId } = body
+    const { type, title, meridianId, parentId, statusId, sprintId } = body
 
     if (!VALID_TYPES.includes(type))  return { status: 400, jsonBody: { error: 'Invalid type' } }
     if (!title?.trim())               return { status: 400, jsonBody: { error: 'Title required' } }
@@ -50,20 +50,21 @@ app.http('itemsCreate', {
 
       const result = await query(
         `INSERT INTO work_items
-           (meridian_id, parent_id, type, title, status_id, created_by, position)
+           (meridian_id, parent_id, type, title, status_id, sprint_id, created_by, position)
          OUTPUT
            INSERTED.id, INSERTED.meridian_id, INSERTED.parent_id, INSERTED.type,
            INSERTED.title, INSERTED.description, INSERTED.status_id,
            INSERTED.assignee_id, INSERTED.sprint_id,
            INSERTED.start_date, INSERTED.due_date, INSERTED.position
          VALUES
-           (@meridianId, @parentId, @type, @title, @statusId, @userId, @position)`,
+           (@meridianId, @parentId, @type, @title, @statusId, @sprintId, @userId, @position)`,
         [
           { name: 'meridianId', type: sql.Int,      value: meridianId        },
           { name: 'parentId',   type: sql.Int,      value: parentId ?? null  },
           { name: 'type',       type: sql.VarChar,  value: type              },
           { name: 'title',      type: sql.NVarChar, value: title.trim()      },
           { name: 'statusId',   type: sql.Int,      value: statusId ?? null  },
+          { name: 'sprintId',   type: sql.Int,      value: sprintId  ?? null },
           { name: 'userId',     type: sql.Int,      value: userId            },
           { name: 'position',   type: sql.Int,      value: position          },
         ]

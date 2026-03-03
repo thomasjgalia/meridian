@@ -450,6 +450,23 @@ export default function Board() {
 
   // ── Backlog rows — scoped to active meridian ────────────────────────────────
   // Arcs always live in the backlog regardless of their sprintId.
+  // Count all descendants (across backlog + sprints) for each episode
+  const episodeChildCounts = useMemo(() => {
+    const counts = {}
+    for (const item of items) {
+      if (item.type === 'episode') counts[item.id] = 0
+    }
+    for (const item of items) {
+      if (item.type === 'arc' || item.type === 'episode') continue
+      let cur = itemMap[item.parentId]
+      while (cur) {
+        if (cur.type === 'episode') { counts[cur.id] = (counts[cur.id] ?? 0) + 1; break }
+        cur = cur.parentId ? itemMap[cur.parentId] : null
+      }
+    }
+    return counts
+  }, [items, itemMap])
+
   const backlogRows = useMemo(() => {
     if (filters.sprintId !== null) return []
     let backlogItems = items.filter((i) =>
@@ -894,9 +911,10 @@ export default function Board() {
           <button
             type="button"
             onClick={() => { setNewWorkContext(null); setNewWorkOpen(true) }}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white text-xs font-medium transition-colors"
+            className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-meridian-600 hover:bg-meridian-700 text-white transition-colors"
+            title="New work item"
           >
-            <Plus size={13} /> Work
+            <Plus size={15} />
           </button>
         )}
 
@@ -1022,6 +1040,7 @@ export default function Board() {
                           userMap={userMap}
                           sprintMap={sprintMap}
                           itemMap={itemMap}
+                          episodeChildCount={episodeChildCounts[clipped.id]}
                         />
                       )
                     })

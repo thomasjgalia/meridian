@@ -85,6 +85,7 @@ function SprintItemRow({
   isSelected,
   isExpanded,
   parentName,
+  episodeChildCount,
   onSelect,
   onToggle,
   onStatusCycle,
@@ -149,6 +150,13 @@ function SprintItemRow({
         )}
       </div>
 
+      {/* Episode child count */}
+      {row.type === 'episode' && episodeChildCount > 0 && (
+        <span className="inline-flex shrink-0 text-2xs text-gray-400">
+          {episodeChildCount} item{episodeChildCount !== 1 ? 's' : ''}
+        </span>
+      )}
+
       {/* Due date — inline editable */}
       {(row.dueDate || onUpdate) && (
         <div className="hidden sm:flex shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
@@ -212,7 +220,7 @@ export default function SprintSection({
   const [collapsed,    setCollapsed]    = useState(defaultCollapsed)
   const [collapsedIds, setCollapsedIds] = useState(new Set())
   const [editOpen,     setEditOpen]     = useState(false)
-  const [depth,        setDepth]        = useState('episode')
+  const [depth,        setDepth]        = useState('signal')
 
   const handleToggle = (id) => {
     setCollapsedIds((prev) => {
@@ -229,6 +237,24 @@ export default function SprintSection({
   }
 
   const rows           = buildSprintTree(items, collapsedIds)
+
+  // Count all descendants (backlog + other sprints) for each episode in this sprint
+  const episodeChildCounts = (() => {
+    const counts = {}
+    for (const item of items) {
+      if (item.type === 'episode') counts[item.id] = 0
+    }
+    for (const item of items) {
+      if (item.type === 'arc' || item.type === 'episode') continue
+      let cur = allItemMap[item.parentId]
+      while (cur) {
+        if (cur.type === 'episode') { counts[cur.id] = (counts[cur.id] ?? 0) + 1; break }
+        cur = cur.parentId ? allItemMap[cur.parentId] : null
+      }
+    }
+    return counts
+  })()
+
   const completedCount = items.filter((i) => statusMap[i.statusId]?.isComplete).length
   const progress       = items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0
   const dateStr        = sprint.startDate && sprint.endDate
@@ -327,6 +353,7 @@ export default function SprintSection({
                     isSelected={clipped.id === selectedId}
                     isExpanded={!collapsedIds.has(clipped.id)}
                     parentName={clipped.parentId ? allItemMap[clipped.parentId]?.title : null}
+                    episodeChildCount={episodeChildCounts[clipped.id]}
                     onSelect={onSelect}
                     onToggle={handleToggle}
                     onStatusCycle={onStatusCycle}
