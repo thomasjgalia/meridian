@@ -299,7 +299,7 @@ export default function Board() {
   // ── UI state ──────────────────────────────────────────────────────────────
   const [expanded,          setExpanded]          = useState(new Set())
   const [backlogCollapsed,  setBacklogCollapsed]  = useState(false)
-  const [backlogDepth,      setBacklogDepth]      = useState('episode')
+  const [backlogDepth,      setBacklogDepth]      = useState('signal')
   const [selectedId,        setSelectedId]        = useState(() => {
     const params = new URLSearchParams(window.location.search)
     const p = params.get('item')
@@ -600,7 +600,7 @@ export default function Board() {
     const childType = ADD_CHILD_TYPE[parentItem.type]
     if (!childType) return
 
-    const ctx = { type: childType }
+    const ctx = { type: childType, sprintId: parentItem.sprintId ?? null }
     // Walk up the tree to set arc/episode/signal context IDs
     let cur = parentItem
     while (cur) {
@@ -1082,6 +1082,7 @@ export default function Board() {
         <NewWorkModal
           items={items}
           statuses={statuses}
+          meridianId={activeMeridianId}
           initialContext={newWorkContext}
           onAdd={handleAddItem}
           onClose={() => { setNewWorkOpen(false); setNewWorkContext(null) }}

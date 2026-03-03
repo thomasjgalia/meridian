@@ -39,15 +39,19 @@ function SelectField({ label, value, onChange, options, placeholder, disabled })
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
-export default function NewWorkModal({ items, statuses, initialContext, onAdd, onClose }) {
+export default function NewWorkModal({ items, statuses, meridianId, initialContext, onAdd, onClose }) {
   const [type,       setType]      = useState(initialContext?.type      ?? 'episode')
   const [title,      setTitle]     = useState('')
   const [arcId,      setArcId]     = useState(initialContext?.arcId     ?? null)
   const [episodeId,  setEpisodeId] = useState(initialContext?.episodeId ?? null)
   const [signalId,   setSignalId]  = useState(initialContext?.signalId  ?? null)
+  const sprintId                   = initialContext?.sprintId  ?? null
 
-  // Cascading option lists derived from items
-  const arcs     = useMemo(() => items.filter((i) => i.type === 'arc'),     [items])
+  // Cascading option lists derived from items — scoped to active meridian
+  const arcs     = useMemo(
+    () => items.filter((i) => i.type === 'arc' && (!meridianId || i.meridianId === meridianId)),
+    [items, meridianId]
+  )
   const episodes = useMemo(
     () => items.filter((i) => i.type === 'episode' && (!arcId || i.parentId === arcId)),
     [items, arcId]
@@ -131,7 +135,7 @@ export default function NewWorkModal({ items, statuses, initialContext, onAdd, o
       title:       title.trim(),
       statusId:    defaultStatus.id,
       assigneeId:  null,
-      sprintId:    null,
+      sprintId,
       position:    siblings.length,
       description: null,
     })

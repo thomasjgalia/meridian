@@ -44,7 +44,7 @@ export function StatusDot({ status, onClick }) {
       style={{ color: status.color }}
       className={`w-[18px] h-[18px] flex items-center justify-center shrink-0 transition-all ${interactClass}`}
     >
-      <Icon size={18} strokeWidth={2} />
+      <Icon size={18} strokeWidth={2.5} />
     </button>
   )
 }

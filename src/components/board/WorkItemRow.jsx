@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { ChevronRight, Plus, CalendarDays } from 'lucide-react'
 import { TYPE_ICONS } from '../icons'
 import { StatusDot } from '../ui/StatusChip'
@@ -47,6 +47,25 @@ export default function WorkItemRow({
   const parentItem = item.parentId ? itemMap[item.parentId] : null
 
   const [editingDue, setEditingDue] = useState(false)
+
+  // Count all descendant work items for episode rows
+  const childCount = useMemo(() => {
+    if (item.type !== 'episode') return null
+    const stack = [item.id]
+    let count = 0
+    const visited = new Set([item.id])
+    while (stack.length) {
+      const id = stack.pop()
+      for (const i of Object.values(itemMap)) {
+        if (i.parentId === id && !visited.has(i.id)) {
+          count++
+          visited.add(i.id)
+          stack.push(i.id)
+        }
+      }
+    }
+    return count
+  }, [item.id, item.type, itemMap])
 
   const indentPx = `calc(var(--board-px) + ${depth * INDENT}px)`
   const rowBg = isSelected
@@ -101,6 +120,13 @@ export default function WorkItemRow({
           </button>
         )}
       </div>
+
+      {/* Episode child count */}
+      {childCount !== null && (
+        <span className="hidden sm:inline-flex shrink-0 text-2xs text-gray-400">
+          {childCount} item{childCount !== 1 ? 's' : ''}
+        </span>
+      )}
 
       {/* Sprint tag */}
       {sprint && (
