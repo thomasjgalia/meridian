@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { Plus, ChevronLeft, ChevronRight, Pencil, LogOut } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import {
   DndContext, closestCenter,
   KeyboardSensor, PointerSensor,
@@ -25,11 +25,6 @@ function toMap(arr, key = 'id') {
   return Object.fromEntries(arr.map((x) => [x[key], x]))
 }
 
-function offsetDate(dateStr, days) {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + days)
-  return d.toLocaleDateString('en-CA')
-}
 
 function formatDateLong(dateStr) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-GB', {
@@ -519,7 +514,9 @@ export default function TodayPage({ onNavigate, defaultMeridianId }) {
 
       {addFromSprintOpen && (
         <AddFromSprintModal
-          activeSprintItems={activeSprintItems}
+          activeSprintItems={activeMeridianId
+            ? activeSprintItems.filter((i) => i.meridianId === activeMeridianId)
+            : activeSprintItems}
           statusMap={statusMap}
           userMap={userMap}
           sprintMap={sprintMap}

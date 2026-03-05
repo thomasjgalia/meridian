@@ -101,7 +101,7 @@ app.http('todayGet', {
           ]
         ),
 
-        // Active sprint items the user can see that are NOT already in today's plan
+        // Active sprint Signals + Relays (non-complete) for the active meridian, not already in today's plan
         query(
           `SELECT wi.id, wi.meridian_id, wi.parent_id, wi.type, wi.title,
                   wi.description, wi.status_id, wi.assignee_id, wi.sprint_id,
@@ -109,19 +109,19 @@ app.http('todayGet', {
            FROM   work_items wi
            JOIN   sprints sp            ON sp.id = wi.sprint_id
            JOIN   meridian_members mm   ON mm.meridian_id = wi.meridian_id
+           JOIN   statuses s            ON s.id = wi.status_id
            WHERE  mm.user_id = @userId
              AND  sp.state = 'active'
              AND  wi.is_active = 1
-             AND  wi.type NOT IN ('arc', 'todo')
+             AND  wi.type IN ('signal', 'relay')
+             AND  s.is_complete = 0
              AND  NOT EXISTS (
                SELECT 1 FROM daily_plan_items dp2
                WHERE  dp2.item_id = wi.id
                  AND  dp2.user_id = @userId
                  AND  dp2.plan_date = @planDate
              )
-           ORDER  BY sp.id,
-                     CASE wi.type WHEN 'episode' THEN 0 WHEN 'signal' THEN 1 ELSE 2 END,
-                     wi.parent_id, wi.position`,
+           ORDER  BY sp.id, wi.parent_id, wi.position`,
           [
             { name: 'userId',   type: sql.Int,  value: userId  },
             { name: 'planDate', type: sql.Date, value: dateStr },

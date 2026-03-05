@@ -5,9 +5,8 @@ import { StatusDot } from '../ui/StatusChip'
 import Avatar from '../ui/Avatar'
 
 const TYPE_COLOR = {
-  episode: 'text-indigo-600',
-  signal:  'text-rose-600',
-  relay:   'text-orange-500',
+  signal: 'text-rose-600',
+  relay:  'text-orange-500',
 }
 
 export default function AddFromSprintModal({
