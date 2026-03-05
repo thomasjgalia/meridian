@@ -4,7 +4,7 @@ const { resolveUser } = require('../shared/user')
 const { query, sql }  = require('../shared/db')
 const { getMemberRole, canWrite } = require('../shared/roles')
 
-const VALID_TYPES  = ['arc', 'episode', 'signal', 'relay']
+const VALID_TYPES  = ['arc', 'episode', 'signal', 'relay', 'todo']
 const VALID_FIELDS = ['title', 'description', 'statusId', 'assigneeId', 'sprintId', 'parentId', 'meridianId', 'startDate', 'dueDate']
 
 // ── POST /api/items ────────────────────────────────────────────────────────────

@@ -51,7 +51,25 @@ export const MOCK_WORK_ITEMS = [
   { id: 18, meridianId: 2, parentId: 15,  type: 'signal',  title: 'Implement push notification consent',   statusId: 2, assigneeId: 2,    sprintId: null, position: 1, description: null },
   { id: 19, meridianId: 2, parentId: 15,  type: 'signal',  title: 'Account linking screen',                statusId: 1, assigneeId: null, sprintId: null, position: 2, description: null },
   { id: 20, meridianId: 2, parentId: 18,  type: 'relay',   title: 'Wire up UNUserNotificationCenter',      statusId: 2, assigneeId: 2,    sprintId: null, position: 0, description: null },
+
+  // ── Personal To Dos (type='todo', no parent, no sprint) ──────────────────
+  { id: 21, meridianId: 1, parentId: null, type: 'todo', title: 'Review API contract changes with security team', statusId: 2, assigneeId: 0, sprintId: null, position: 0, dueDate: '2026-03-05', description: 'Walk through the new /auth/revoke endpoint schema before DB approval meeting.' },
+  { id: 22, meridianId: 1, parentId: null, type: 'todo', title: 'Update sprint notes doc',                        statusId: 1, assigneeId: 0, sprintId: null, position: 1, dueDate: '2026-03-05', description: null },
+  { id: 23, meridianId: 2, parentId: null, type: 'todo', title: 'Sync with design on onboarding screens',         statusId: 4, assigneeId: 0, sprintId: null, position: 2, dueDate: '2026-03-04', description: null },
 ]
+
+// ── Mock daily plan (Today's Activity) ────────────────────────────────────────
+// Plan for 2026-03-05 — ordered list: todo #21, sprint item #6, todo #22
+export const MOCK_DAILY_PLAN = {
+  '2026-03-05': {
+    plan: [
+      { itemId: 21, position: 0 },
+      { itemId: 6,  position: 1 },
+      { itemId: 22, position: 2 },
+    ],
+    carryOver: { fromDate: '2026-03-04', count: 1 }, // todo #23 incomplete from yesterday
+  },
+}
 
 // ── Mock activity for the slide panel ─────────────────────────────────────────
 export const MOCK_ACTIVITY = {

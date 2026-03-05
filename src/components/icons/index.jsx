@@ -1,7 +1,7 @@
 // src/components/icons/index.jsx
 // Meridian Icon Set — custom icons (Lighthouse, Sextant) + Lucide type icons
 
-import { DraftingCompass, Spline, ChevronsRight } from 'lucide-react'
+import { DraftingCompass, Spline, ChevronsRight, ListTodo } from 'lucide-react'
 
 // Type icons — Lucide icons mapped to Meridian work item types
 export const IconArc     = Spline          // arc
@@ -21,6 +21,7 @@ export const IconSignal = ({ size = 18, className = '' }) => (
   </svg>
 )
 export const IconRelay   = ChevronsRight   // relay
+export const IconTodo    = ListTodo        // to do (personal, outside hierarchy)
 
 // Map item type → icon component
 export const TYPE_ICONS = {
@@ -28,6 +29,7 @@ export const TYPE_ICONS = {
   episode: IconEpisode,
   signal:  IconSignal,
   relay:   IconRelay,
+  todo:    IconTodo,
 }
 
 export const IconLighthouse = ({ size = 18, className = '' }) => (

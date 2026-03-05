@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Plus, ChevronRight, Settings, Download, Pencil, LogOut } from 'lucide-react'
+import { Plus, ChevronRight, Settings, Download, Pencil, LogOut, CalendarDays } from 'lucide-react'
 import { useAuth } from '../../auth/AuthContext'
 import { api } from '../../api/client'
 import { IconSextant, IconArc, IconEpisode, IconSignal, IconRelay } from '../icons'
@@ -282,7 +282,7 @@ const INITIAL_FILTERS = { meridianIds: [], arcIds: [], episodeIds: [], assigneeI
 // Child type produced when clicking "+" on a parent row
 const ADD_CHILD_TYPE = { arc: 'episode', episode: 'signal', signal: 'relay' }
 
-export default function Board() {
+export default function Board({ onNavigate }) {
   const { user, logout } = useAuth()
 
   // ── Server state ──────────────────────────────────────────────────────────
@@ -470,6 +470,7 @@ export default function Board() {
   const backlogRows = useMemo(() => {
     if (filters.sprintId !== null) return []
     let backlogItems = items.filter((i) =>
+      i.type !== 'todo' &&
       (i.sprintId === null || i.type === 'arc') && (!activeMeridianId || i.meridianId === activeMeridianId)
     )
     if (overdueOnly) {
@@ -887,6 +888,18 @@ export default function Board() {
         </div>
 
         <div className="flex-1" />
+
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={() => onNavigate('today', activeMeridianId)}
+            className="hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800 text-xs font-medium transition-colors"
+            title="Today's Activity"
+          >
+            <CalendarDays size={13} />
+            Today
+          </button>
+        )}
 
         <button
           type="button"

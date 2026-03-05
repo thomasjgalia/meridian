@@ -1,13 +1,23 @@
+import { useState } from 'react'
 import { useAuth } from './auth/AuthContext'
 import Board from './components/board/Board'
+import TodayPage from './components/today/TodayPage'
 import { IconSextant } from './components/icons'
 
 export default function App() {
   const { isAuthenticated, isLoading, login } = useAuth()
+  const [page, setPage] = useState('board')
+  const [lastMeridianId, setLastMeridianId] = useState(null)
+
+  function handleNavigate(newPage, meridianId) {
+    if (meridianId != null) setLastMeridianId(meridianId)
+    setPage(newPage)
+  }
 
   if (isLoading) return <LoadingScreen />
   if (!isAuthenticated) return <LoginScreen onLogin={login} />
-  return <Board />
+  if (page === 'today') return <TodayPage onNavigate={handleNavigate} defaultMeridianId={lastMeridianId} />
+  return <Board onNavigate={handleNavigate} />
 }
 
 function LoginScreen({ onLogin }) {

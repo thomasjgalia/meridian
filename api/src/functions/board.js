@@ -144,7 +144,7 @@ app.http('board', {
                   wi.start_date, wi.due_date, wi.position, wi.created_at
            FROM   work_items wi
            JOIN   meridian_members mm ON mm.meridian_id = wi.meridian_id
-           WHERE  mm.user_id = @userId AND wi.is_active = 1
+           WHERE  mm.user_id = @userId AND wi.is_active = 1 AND wi.type != 'todo'
            ORDER  BY wi.meridian_id,
                      CASE wi.type WHEN 'arc' THEN 0 WHEN 'episode' THEN 1 WHEN 'signal' THEN 2 WHEN 'relay' THEN 3 ELSE 9 END,
                      wi.parent_id,
